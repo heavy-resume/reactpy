@@ -152,7 +152,7 @@ export class SimpleReactPyClient
     this.reconnectOptions = props.reconnectOptions
 
     this.reconnect()
-    this.intervalId = window.setInterval(this.socketLoop, 75);
+    this.intervalId = window.setInterval(() => { this.socketLoop() }, 75);
   }
 
   socketLoop(): void {
