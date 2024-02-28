@@ -9,15 +9,15 @@ from anyio import create_task_group
 from anyio.abc import TaskGroup
 
 from reactpy.config import REACTPY_DEBUG_MODE
-from reactpy.core.types import LayoutEventMessage, LayoutType, LayoutUpdateMessage
+from reactpy.core.types import LayoutEventMessage, LayoutType, LayoutUpdateMessage, ReconnectingCheckMessage
 
 logger = getLogger(__name__)
 
 
-SendCoroutine = Callable[[LayoutUpdateMessage], Awaitable[None]]
+SendCoroutine = Callable[[LayoutUpdateMessage | ReconnectingCheckMessage], Awaitable[None]]
 """Send model patches given by a dispatcher"""
 
-RecvCoroutine = Callable[[], Awaitable[LayoutEventMessage]]
+RecvCoroutine = Callable[[], Awaitable[LayoutEventMessage | ReconnectingCheckMessage]]
 """Called by a dispatcher to return a :class:`reactpy.core.layout.LayoutEventMessage`
 
 The event will then trigger an :class:`reactpy.core.proto.EventHandlerType` in a layout.
@@ -81,3 +81,21 @@ async def _single_incoming_loop(
         # We need to fire and forget here so that we avoid waiting on the completion
         # of this event handler before receiving and running the next one.
         task_group.start_soon(layout.deliver, await recv())
+
+
+async def handshake(
+    send: SendCoroutine,
+    recv: RecvCoroutine,
+) -> None:
+    await send({"type": "reconnecting-check"})
+    result = await recv()
+    if result['type'] == "reconnecting-check":
+        if result["value"] == "yes":
+            await do_reconnection(send, recv)
+
+
+async def do_reconnection(
+    send: SendCoroutine,
+    recv: RecvCoroutine,
+) -> None:
+    pass

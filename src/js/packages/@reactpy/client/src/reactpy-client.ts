@@ -37,7 +37,7 @@ export abstract class BaseReactPyClient implements ReactPyClient {
   private resolveReady: (value: undefined) => void;
 
   constructor() {
-    this.resolveReady = () => {};
+    this.resolveReady = () => { };
     this.ready = new Promise((resolve) => (this.resolveReady = resolve));
   }
 
@@ -79,6 +79,8 @@ export abstract class BaseReactPyClient implements ReactPyClient {
 export type SimpleReactPyClientProps = {
   serverLocation?: LocationProps;
   reconnectOptions?: ReconnectProps;
+  forceRerender?: boolean;
+  idleDisconnectTimeSeconds?: number;
 };
 
 /**
@@ -121,10 +123,16 @@ type ReconnectProps = {
 
 export class SimpleReactPyClient
   extends BaseReactPyClient
-  implements ReactPyClient
-{
+  implements ReactPyClient {
   private readonly urls: ServerUrls;
-  private readonly socket: { current?: WebSocket };
+  private socket!: { current?: WebSocket };
+  private idleDisconnectTimeMillis: number;
+  private lastMessageTime: number;
+  private reconnectOptions: ReconnectProps | undefined;
+  // @ts-ignore
+  private forceRerender: boolean;
+  private messageQueue: any[] = [];
+  private intervalId: number | null;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
@@ -136,21 +144,61 @@ export class SimpleReactPyClient
         query: document.location.search,
       },
     );
+    this.idleDisconnectTimeMillis = (props.idleDisconnectTimeSeconds || 240) * 1000;
+    this.forceRerender = props.forceRerender !== undefined ? props.forceRerender : false;
+    this.lastMessageTime = Date.now()
+    this.reconnectOptions = props.reconnectOptions
 
+    this.reconnect()
+    this.intervalId = window.setInterval(this.socketLoop, 25);
+  }
+
+  socketLoop(): void {
+    if (this.socket.current && this.socket.current.readyState === WebSocket.OPEN && this.messageQueue.length > 0) {
+      const message = this.messageQueue.shift(); // Remove the first message from the queue
+      this.socket.current.send(JSON.stringify(message));
+    }
+    this.idleTimeoutCheck();
+  }
+
+  idleTimeoutCheck(): void {
+    if (Date.now() - this.lastMessageTime > this.idleDisconnectTimeMillis) {
+      if (this.socket.current && this.socket.current.readyState === WebSocket.OPEN) {
+        this.socket.current.close();
+      }
+    }
+  }
+
+  reconnect(onOpen?: () => void): void {
     this.socket = createReconnectingWebSocket({
       readyPromise: this.ready,
       url: this.urls.stream,
+      onOpen: onOpen,
       onMessage: async ({ data }) => this.handleIncoming(JSON.parse(data)),
-      ...props.reconnectOptions,
+      ...this.reconnectOptions,
     });
   }
 
+  ensureConnected(): void {
+    if (this.socket.current?.readyState == WebSocket.CLOSED) {
+      this.reconnect();
+    }
+  }
+
   sendMessage(message: any): void {
-    this.socket.current?.send(JSON.stringify(message));
+    this.messageQueue.push(message);
+    this.ensureConnected();
   }
 
   loadModule(moduleName: string): Promise<ReactPyModule> {
     return import(`${this.urls.modules}/${moduleName}`);
+  }
+
+  stop(): void {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
   }
 }
 
@@ -247,9 +295,9 @@ function nextInterval(
   maxInterval: number,
 ): number {
   return Math.min(
-    currentInterval *
+    (currentInterval *
       // increase interval by backoff rate
-      backoffRate,
+      backoffRate),
     // don't exceed max interval
     maxInterval,
   );

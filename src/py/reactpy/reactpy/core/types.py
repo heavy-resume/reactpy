@@ -215,6 +215,14 @@ class LayoutUpdateMessage(TypedDict):
     """The model to assign at the given JSON Pointer path"""
 
 
+class ReconnectingCheckMessage(TypedDict):
+    """A message describing an update to a layout"""
+
+    type: Literal["reconnecting-check"]
+    """The type of message"""
+    value: Literal["yes", "no"]
+
+
 class LayoutEventMessage(TypedDict):
     """Message describing an event originating from an element in the layout"""
 
