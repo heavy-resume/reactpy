@@ -154,6 +154,8 @@ export class SimpleReactPyClient
   }
 
   socketLoop(): void {
+    if (!this.socket)
+      return;
     if (this.socket.current && this.socket.current.readyState === WebSocket.OPEN && this.messageQueue.length > 0) {
       const message = this.messageQueue.shift(); // Remove the first message from the queue
       this.socket.current.send(JSON.stringify(message));
