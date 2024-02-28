@@ -65,6 +65,8 @@ export abstract class BaseReactPyClient implements ReactPyClient {
       return;
     }
 
+    logger.log("Got message", message);
+
     const messageHandlers: ((m: any) => void)[] | undefined =
       this.handlers[message.type];
     if (!messageHandlers) {
