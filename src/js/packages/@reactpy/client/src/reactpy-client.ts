@@ -135,6 +135,7 @@ export class SimpleReactPyClient
   private forceRerender: boolean;
   private messageQueue: any[] = [];
   private socketLoopIntervalId?: number | null;
+  private sleeping: boolean;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
@@ -150,6 +151,7 @@ export class SimpleReactPyClient
     this.forceRerender = props.forceRerender !== undefined ? props.forceRerender : false;
     this.lastMessageTime = Date.now()
     this.reconnectOptions = props.reconnectOptions
+    this.sleeping = false;
 
     this.reconnect()
   }
@@ -169,6 +171,7 @@ export class SimpleReactPyClient
     if (Date.now() - this.lastMessageTime > this.idleDisconnectTimeMillis) {
       if (this.socket.current && this.socket.current.readyState === WebSocket.OPEN) {
         logger.warn("Closing socket connection due to idle activity");
+        this.sleeping = true;
         this.socket.current.close();
       }
     }
@@ -182,6 +185,9 @@ export class SimpleReactPyClient
       onClose: () => {
         if (this.socketLoopIntervalId)
           clearInterval(this.socketLoopIntervalId);
+        if (!this.sleeping) {
+          this.reconnect(onOpen);
+        }
       },
       onMessage: async ({ data }) => { this.lastMessageTime = Date.now(); this.handleIncoming(JSON.parse(data)) },
       ...this.reconnectOptions,
@@ -198,6 +204,7 @@ export class SimpleReactPyClient
   sendMessage(message: any): void {
     this.messageQueue.push(message);
     this.lastMessageTime = Date.now()
+    this.sleeping = false;
     this.ensureConnected();
   }
 
