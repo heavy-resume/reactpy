@@ -152,7 +152,7 @@ export class SimpleReactPyClient
     this.reconnectOptions = props.reconnectOptions
 
     this.reconnect()
-    this.intervalId = window.setInterval(this.socketLoop, 25);
+    this.intervalId = window.setInterval(this.socketLoop, 75);
   }
 
   socketLoop(): void {
@@ -160,6 +160,7 @@ export class SimpleReactPyClient
       return;
     if (this.socket.current && this.socket.current.readyState === WebSocket.OPEN && this.messageQueue.length > 0) {
       const message = this.messageQueue.shift(); // Remove the first message from the queue
+      logger.log("Sending message", message);
       this.socket.current.send(JSON.stringify(message));
     }
     this.idleTimeoutCheck();
