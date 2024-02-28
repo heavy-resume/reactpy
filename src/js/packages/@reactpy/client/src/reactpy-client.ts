@@ -134,7 +134,7 @@ export class SimpleReactPyClient
   // @ts-ignore
   private forceRerender: boolean;
   private messageQueue: any[] = [];
-  private intervalId: number | null;
+  private socketLoopIntervalId?: number | null;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
@@ -152,7 +152,6 @@ export class SimpleReactPyClient
     this.reconnectOptions = props.reconnectOptions
 
     this.reconnect()
-    this.intervalId = window.setInterval(() => { this.socketLoop() }, 50);
   }
 
   socketLoop(): void {
@@ -171,8 +170,6 @@ export class SimpleReactPyClient
       if (this.socket.current && this.socket.current.readyState === WebSocket.OPEN) {
         logger.warn("Closing socket connection due to idle activity");
         this.socket.current.close();
-        if (this.intervalId)
-          clearInterval(this.intervalId);
       }
     }
   }
@@ -182,9 +179,14 @@ export class SimpleReactPyClient
       readyPromise: this.ready,
       url: this.urls.stream,
       onOpen: onOpen,
+      onClose: () => {
+        if (this.socketLoopIntervalId)
+          clearInterval(this.socketLoopIntervalId);
+      },
       onMessage: async ({ data }) => { this.lastMessageTime = Date.now(); this.handleIncoming(JSON.parse(data)) },
       ...this.reconnectOptions,
     });
+    this.socketLoopIntervalId = window.setInterval(() => { this.socketLoop() }, 50);
   }
 
   ensureConnected(): void {
@@ -201,13 +203,6 @@ export class SimpleReactPyClient
 
   loadModule(moduleName: string): Promise<ReactPyModule> {
     return import(`${this.urls.modules}/${moduleName}`);
-  }
-
-  stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
   }
 }
 
