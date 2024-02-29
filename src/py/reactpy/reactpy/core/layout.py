@@ -668,7 +668,7 @@ def _make_life_cycle_state(
     life_cycle_state_id = _LifeCycleStateId(uuid4().hex)
     return _LifeCycleState(
         life_cycle_state_id,
-        LifeCycleHook(lambda: schedule_render(life_cycle_state_id)),
+        LifeCycleHook(lambda: schedule_render(life_cycle_state_id), reconnecting=False),
         component,
     )
 
