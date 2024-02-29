@@ -396,6 +396,8 @@ class Layout:
                         key,
                         child,
                         self._schedule_render_task,
+                        self.reconnecting,
+                        self.client_state
                     )
                 elif old_child_state.is_component_state and (
                     old_child_state.life_cycle_state.component.type != child.type
@@ -408,6 +410,8 @@ class Layout:
                         key,
                         child,
                         self._schedule_render_task,
+                        self.reconnecting,
+                        self.client_state
                     )
                 else:
                     new_child_state = _update_component_model_state(
@@ -416,6 +420,8 @@ class Layout:
                         index,
                         child,
                         self._schedule_render_task,
+                        self.reconnecting,
+                        self.client_state
                     )
                 await self._render_component(
                     exit_stack, old_child_state, new_child_state, child
@@ -450,7 +456,7 @@ class Layout:
                 new_state.children_by_key[key] = child_state
             elif child_type is _COMPONENT_TYPE:
                 child_state = _make_component_model_state(
-                    new_state, index, key, child, self._schedule_render_task
+                    new_state, index, key, child, self._schedule_render_task, self.reconnecting, self.client_state
                 )
                 await self._render_component(exit_stack, None, child_state, child)
             else:
@@ -511,6 +517,8 @@ def _make_component_model_state(
     key: Any,
     component: ComponentType,
     schedule_render: Callable[[_LifeCycleStateId], None],
+    reconnecting: bool,
+    client_state: dict[str, Any]
 ) -> _ModelState:
     return _ModelState(
         parent=parent,
@@ -520,7 +528,7 @@ def _make_component_model_state(
         patch_path=f"{parent.patch_path}/children/{index}",
         children_by_key={},
         targets_by_event={},
-        life_cycle_state=_make_life_cycle_state(component, schedule_render),
+        life_cycle_state=_make_life_cycle_state(component, schedule_render, reconnecting, client_state),
     )
 
 
@@ -549,6 +557,8 @@ def _update_component_model_state(
     new_index: int,
     new_component: ComponentType,
     schedule_render: Callable[[_LifeCycleStateId], None],
+    reconnecting: bool,
+    client_state: dict[str, Any]
 ) -> _ModelState:
     return _ModelState(
         parent=new_parent,
@@ -561,7 +571,7 @@ def _update_component_model_state(
         life_cycle_state=(
             _update_life_cycle_state(old_model_state.life_cycle_state, new_component)
             if old_model_state.is_component_state
-            else _make_life_cycle_state(new_component, schedule_render)
+            else _make_life_cycle_state(new_component, schedule_render, reconnecting, client_state)
         ),
     )
 
