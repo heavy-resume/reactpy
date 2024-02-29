@@ -29,16 +29,24 @@ export interface ReactPyClient {
    * @returns A promise that resolves to the module.
    */
   loadModule(moduleName: string): Promise<ReactPyModule>;
+
+  /**
+   * Update state vars from the server for reconnections
+   * @param givenStateVars State vars to store
+   */
+  updateStateVars(givenStateVars: object): void;
 }
 
 export abstract class BaseReactPyClient implements ReactPyClient {
   private readonly handlers: { [key: string]: ((message: any) => void)[] } = {};
   protected readonly ready: Promise<void>;
   private resolveReady: (value: undefined) => void;
+  protected stateVars: object;
 
   constructor() {
     this.resolveReady = () => { };
     this.ready = new Promise((resolve) => (this.resolveReady = resolve));
+    this.stateVars = {};
   }
 
   onMessage(type: string, handler: (message: any) => void): () => void {
@@ -51,6 +59,11 @@ export abstract class BaseReactPyClient implements ReactPyClient {
 
   abstract sendMessage(message: any): void;
   abstract loadModule(moduleName: string): Promise<ReactPyModule>;
+
+  updateStateVars(givenStateVars: object): void {
+    Object.assign(this.stateVars, givenStateVars);
+    logger.log(this.stateVars);
+  }
 
   /**
    * Handle an incoming message.

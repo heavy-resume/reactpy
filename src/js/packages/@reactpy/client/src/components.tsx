@@ -29,12 +29,13 @@ export function Layout(props: { client: ReactPyClient }): JSX.Element {
 
   useEffect(
     () =>
-      props.client.onMessage("layout-update", ({ path, model }) => {
+      props.client.onMessage("layout-update", ({ path, model, stateVars }) => {
         if (path === "") {
           Object.assign(currentModel, model);
         } else {
           setJsonPointer(currentModel, path, model);
         }
+        props.client.updateStateVars(stateVars);
         forceUpdate();
       }),
     [currentModel, props.client],
