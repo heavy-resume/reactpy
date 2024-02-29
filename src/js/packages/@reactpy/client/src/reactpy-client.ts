@@ -123,6 +123,11 @@ type ReconnectProps = {
   intervalJitter?: number;
 };
 
+enum messageTypes {
+  isReady = "is-ready",
+  reconnectingCheck = "reconnecting-check"
+};
+
 export class SimpleReactPyClient
   extends BaseReactPyClient
   implements ReactPyClient {
@@ -137,6 +142,7 @@ export class SimpleReactPyClient
   private socketLoopIntervalId?: number | null;
   private sleeping: boolean;
   private isReconnecting: boolean;
+  private isReady: boolean;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
@@ -154,26 +160,34 @@ export class SimpleReactPyClient
     this.reconnectOptions = props.reconnectOptions
     this.sleeping = false;
     this.isReconnecting = false;
+    this.isReady = false
 
-    this.onMessage("reconnecting-check", () => { this.indicateReconnect() })
+    this.onMessage(messageTypes.reconnectingCheck, () => { this.indicateReconnect() })
+    this.onMessage(messageTypes.isReady, () => { this.isReady = true });
 
     this.reconnect()
   }
 
   indicateReconnect(): void {
     const isReconnecting = this.isReconnecting ? "yes" : "no";
-    this.sendMessage({ "type": "reconnecting-check", "value": isReconnecting })
+    this.sendMessage({ "type": messageTypes.reconnectingCheck, "value": isReconnecting }, true)
   }
 
   socketLoop(): void {
     if (!this.socket)
       return;
-    if (this.socket.current && this.socket.current.readyState === WebSocket.OPEN && this.messageQueue.length > 0) {
+    if (this.messageQueue.length > 0 && this.isReady && this.socket.current && this.socket.current.readyState === WebSocket.OPEN) {
       const message = this.messageQueue.shift(); // Remove the first message from the queue
+      this.transmitMessage(message);
+    }
+    this.idleTimeoutCheck();
+  }
+
+  transmitMessage(message: any): void {
+    if (this.socket && this.socket.current) {
       logger.log("Sending message", message);
       this.socket.current.send(JSON.stringify(message));
     }
-    this.idleTimeoutCheck();
   }
 
   idleTimeoutCheck(): void {
@@ -193,6 +207,7 @@ export class SimpleReactPyClient
       onOpen: onOpen,
       onClose: () => {
         this.isReconnecting = true;
+        this.isReady = false;
         if (this.socketLoopIntervalId)
           clearInterval(this.socketLoopIntervalId);
         if (!this.sleeping) {
@@ -211,8 +226,12 @@ export class SimpleReactPyClient
     }
   }
 
-  sendMessage(message: any): void {
-    this.messageQueue.push(message);
+  sendMessage(message: any, immediate: boolean = false): void {
+    if (immediate) {
+      this.transmitMessage(message);
+    } else {
+      this.messageQueue.push(message);
+    }
     this.lastMessageTime = Date.now()
     this.sleeping = false;
     this.ensureConnected();

@@ -223,6 +223,12 @@ class ReconnectingCheckMessage(TypedDict):
     value: Literal["yes", "no"]
 
 
+class IsReadyMessage(TypedDict):
+    """Indicate server is ready for client events"""
+
+    type: Literal["is-ready"]
+
+
 class LayoutEventMessage(TypedDict):
     """Message describing an event originating from an element in the layout"""
 

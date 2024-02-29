@@ -12,12 +12,12 @@ from reactpy.backend.types import Connection
 
 from reactpy.config import REACTPY_DEBUG_MODE
 from reactpy.core.layout import Layout
-from reactpy.core.types import LayoutEventMessage, LayoutType, LayoutUpdateMessage, ReconnectingCheckMessage, RootComponentConstructor
+from reactpy.core.types import IsReadyMessage, LayoutEventMessage, LayoutType, LayoutUpdateMessage, ReconnectingCheckMessage, RootComponentConstructor
 
 logger = getLogger(__name__)
 
 
-SendCoroutine = Callable[[LayoutUpdateMessage | ReconnectingCheckMessage], Awaitable[None]]
+SendCoroutine = Callable[[LayoutUpdateMessage | ReconnectingCheckMessage | IsReadyMessage], Awaitable[None]]
 """Send model patches given by a dispatcher"""
 
 RecvCoroutine = Callable[[], Awaitable[LayoutEventMessage | ReconnectingCheckMessage]]
@@ -103,11 +103,12 @@ class WebsocketServer:
             self._send,
             self._recv,
         )
+        await self._indicate_ready()
 
     async def _handshake(
         self,
     ) -> None:
-        await self._send({"type": "reconnecting-check"})
+        await self._send(ReconnectingCheckMessage(type="reconnecting-check"))
         result = await self._recv()
         if result['type'] == "reconnecting-check":
             if result["value"] == "yes":
@@ -118,6 +119,8 @@ class WebsocketServer:
         else:
             logger.warning(f"Unexpected type when expecting reconnecting-check: {result['type']}")
 
+    async def _indicate_ready(self) -> None:
+        await self._send(IsReadyMessage(type="is-ready"))
 
     async def _do_state_rebuild_for_reconnection(
         self,
