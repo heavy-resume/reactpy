@@ -117,7 +117,8 @@ class LifeCycleHook:
         "_scheduled_render",
         "_state",
         "component",
-        "reconnecting"
+        "reconnecting",
+        "client_state"
     )
 
     component: ComponentType
@@ -125,7 +126,8 @@ class LifeCycleHook:
     def __init__(
         self,
         schedule_render: Callable[[], None],
-        reconnecting: bool
+        reconnecting: bool,
+        client_state: dict[str, Any]
     ) -> None:
         self._context_providers: dict[Context[Any], ContextProviderType[Any]] = {}
         self._schedule_render_callback = schedule_render
@@ -138,6 +140,7 @@ class LifeCycleHook:
         self._effect_stops: list[Event] = []
         self._render_access = Semaphore(1)  # ensure only one render at a time
         self.reconnecting = reconnecting
+        self._client_state = client_state or {}
 
     def schedule_render(self) -> None:
         if self._scheduled_render:

@@ -138,7 +138,8 @@ type ReconnectProps = {
 
 enum messageTypes {
   isReady = "is-ready",
-  reconnectingCheck = "reconnecting-check"
+  reconnectingCheck = "reconnecting-check",
+  clientState = "client-state"
 };
 
 export class SimpleReactPyClient
@@ -177,6 +178,7 @@ export class SimpleReactPyClient
 
     this.onMessage(messageTypes.reconnectingCheck, () => { this.indicateReconnect() })
     this.onMessage(messageTypes.isReady, () => { this.isReady = true });
+    this.onMessage(messageTypes.clientState, () => { this.sendClientState() });
 
     this.reconnect()
   }
@@ -184,6 +186,15 @@ export class SimpleReactPyClient
   indicateReconnect(): void {
     const isReconnecting = this.isReconnecting ? "yes" : "no";
     this.sendMessage({ "type": messageTypes.reconnectingCheck, "value": isReconnecting }, true)
+  }
+
+  sendClientState(): void {
+    if (!this.socket)
+      return;
+    this.transmitMessage({
+      "type": "client-state",
+      "value": this.stateVars
+    });
   }
 
   socketLoop(): void {

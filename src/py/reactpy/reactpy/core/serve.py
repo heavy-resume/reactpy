@@ -12,15 +12,15 @@ from reactpy.backend.types import Connection
 
 from reactpy.config import REACTPY_DEBUG_MODE
 from reactpy.core.layout import Layout
-from reactpy.core.types import IsReadyMessage, LayoutEventMessage, LayoutType, LayoutUpdateMessage, ReconnectingCheckMessage, RootComponentConstructor
+from reactpy.core.types import ClientStateMessage, IsReadyMessage, LayoutEventMessage, LayoutType, LayoutUpdateMessage, ReconnectingCheckMessage, RootComponentConstructor
 
 logger = getLogger(__name__)
 
 
-SendCoroutine = Callable[[LayoutUpdateMessage | ReconnectingCheckMessage | IsReadyMessage], Awaitable[None]]
+SendCoroutine = Callable[[LayoutUpdateMessage | ReconnectingCheckMessage | IsReadyMessage | ClientStateMessage], Awaitable[None]]
 """Send model patches given by a dispatcher"""
 
-RecvCoroutine = Callable[[], Awaitable[LayoutEventMessage | ReconnectingCheckMessage]]
+RecvCoroutine = Callable[[], Awaitable[LayoutEventMessage | ReconnectingCheckMessage | ClientStateMessage]]
 """Called by a dispatcher to return a :class:`reactpy.core.layout.LayoutEventMessage`
 
 The event will then trigger an :class:`reactpy.core.proto.EventHandlerType` in a layout.
@@ -43,18 +43,18 @@ async def serve_layout(
     recv: RecvCoroutine,
 ) -> None:
     """Run a dispatch loop for a single view instance"""
-    async with layout:
-        try:
-            async with create_task_group() as task_group:
-                task_group.start_soon(_single_outgoing_loop, layout, send)
-                task_group.start_soon(_single_incoming_loop, task_group, layout, recv)
-        except Stop:  # nocov
-            warn(
-                "The Stop exception is deprecated and will be removed in a future version",
-                UserWarning,
-                stacklevel=1,
-            )
-            logger.info(f"Stopped serving {layout}")
+
+    try:
+        async with create_task_group() as task_group:
+            task_group.start_soon(_single_outgoing_loop, layout, send)
+            task_group.start_soon(_single_incoming_loop, task_group, layout, recv)
+    except Stop:  # nocov
+        warn(
+            "The Stop exception is deprecated and will be removed in a future version",
+            UserWarning,
+            stacklevel=1,
+        )
+        logger.info(f"Stopped serving {layout}")
 
 
 async def _single_outgoing_loop(
@@ -92,27 +92,30 @@ class WebsocketServer:
         self._recv = recv
 
     async def handle_connection(self, connection: Connection, constructor: RootComponentConstructor):
-        await self._handshake()
-        await serve_layout(
-            Layout(
-                ConnectionContext(
-                    constructor(),
-                    value=connection,
-                )
-            ),
-            self._send,
-            self._recv,
+        layout= Layout(
+            ConnectionContext(
+                constructor(),
+                value=connection,
+            )
         )
+        async with layout:
+            await self._handshake(layout)
+            await serve_layout(
+                layout,
+                self._send,
+                self._recv,
+            )
 
     async def _handshake(
         self,
+        layout: Layout
     ) -> None:
         await self._send(ReconnectingCheckMessage(type="reconnecting-check"))
         result = await self._recv()
         if result['type'] == "reconnecting-check":
             if result["value"] == "yes":
                 logger.info("Handshake: Doing state rebuild for reconnection")
-                await self._do_state_rebuild_for_reconnection()
+                await self._do_state_rebuild_for_reconnection(layout)
             else:
                 logger.info("Handshake: new connection")
         else:
@@ -124,5 +127,16 @@ class WebsocketServer:
 
     async def _do_state_rebuild_for_reconnection(
         self,
+        layout: Layout
     ) -> None:
-        pass
+        await self._send(ClientStateMessage(type="client-state"))
+        client_state_msg = await self._recv()
+        if client_state_msg["type"] != "client-state":
+            logger.warning(f"Unexpected type when expecting client-state: {client_state_msg['type']}")
+            return
+        client_state = client_state_msg["value"]
+        layout.reconnecting = True
+        layout.client_state = client_state
+        await layout.render()
+        layout.reconnecting = False
+        layout.client_state = {}

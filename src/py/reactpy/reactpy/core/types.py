@@ -213,6 +213,7 @@ class LayoutUpdateMessage(TypedDict):
     """JSON Pointer path to the model element being updated"""
     model: VdomJson
     """The model to assign at the given JSON Pointer path"""
+    state_vars: dict[str, Any]
 
 
 class ReconnectingCheckMessage(TypedDict):
@@ -221,6 +222,14 @@ class ReconnectingCheckMessage(TypedDict):
     type: Literal["reconnecting-check"]
     """The type of message"""
     value: Literal["yes", "no"]
+
+
+class ClientStateMessage(TypedDict):
+    """A message requesting the current state of the client"""
+
+    type: Literal["client-state"]
+    """The type of message"""
+    value: dict[str, Any]
 
 
 class IsReadyMessage(TypedDict):

@@ -74,6 +74,10 @@ def use_state(initial_value: _Type | Callable[[], _Type], *, server_only: bool =
     else:
         caller_info = get_caller_info()
         key = md5(caller_info.encode()).hexdigest()
+        hook = current_hook()
+        if hook.reconnecting:
+            # TODO: if key is missing, maybe raise exception and abort recovery?
+            initial_value = hook.client_state.get(key, initial_value)
     current_state = _use_const(lambda: _CurrentState(key, initial_value))
     return State(current_state.value, current_state.dispatch)
 
