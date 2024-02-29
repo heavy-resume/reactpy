@@ -103,7 +103,6 @@ class WebsocketServer:
             self._send,
             self._recv,
         )
-        await self._indicate_ready()
 
     async def _handshake(
         self,
@@ -118,6 +117,7 @@ class WebsocketServer:
                 logger.info("Handshake: new connection")
         else:
             logger.warning(f"Unexpected type when expecting reconnecting-check: {result['type']}")
+        await self._indicate_ready()
 
     async def _indicate_ready(self) -> None:
         await self._send(IsReadyMessage(type="is-ready"))
