@@ -28,7 +28,7 @@ from reactpy.backend.hooks import ConnectionContext
 from reactpy.backend.hooks import use_connection as _use_connection
 from reactpy.backend.types import Connection, Location
 from reactpy.core.layout import Layout
-from reactpy.core.serve import RecvCoroutine, SendCoroutine, Stop, serve_layout
+from reactpy.core.serve import RecvCoroutine, SendCoroutine, Stop, WebsocketServer, serve_layout
 from reactpy.core.types import RootComponentConstructor
 
 logger = logging.getLogger(__name__)
@@ -171,27 +171,33 @@ def _setup_single_view_dispatcher_route(
             logger.warning("No scope. Sanic may not be running with an ASGI server")
 
         send, recv = _make_send_recv_callbacks(socket)
-        await serve_layout(
-            Layout(
-                ConnectionContext(
-                    constructor(),
-                    value=Connection(
-                        scope=scope,
-                        location=Location(
-                            pathname=f"/{path[len(options.url_prefix):]}",
-                            search=(
-                                f"?{request.query_string}"
-                                if request.query_string
-                                else ""
-                            ),
-                        ),
-                        carrier=_SanicCarrier(request, socket),
+
+        # TODO: reconnecting handshake
+        server = WebsocketServer(send, recv)
+        await server.handle_connection(
+            Connection(
+                scope=scope,
+                location=Location(
+                    pathname=f"/{path[len(options.url_prefix):]}",
+                    search=(
+                        f"?{request.query_string}"
+                        if request.query_string
+                        else ""
                     ),
-                )
-            ),
-            send,
-            recv,
+                ),
+                carrier=_SanicCarrier(request, socket),
+            ), constructor
         )
+        # await serve_layout(
+        #     Layout(
+        #         ConnectionContext(
+        #             constructor(),
+        #             value=,
+        #         )
+        #     ),
+        #     send,
+        #     recv,
+        # )
 
     api_blueprint.add_websocket_route(
         model_stream,
