@@ -85,7 +85,7 @@ class Layout:
         self._render_tasks_ready: Semaphore = Semaphore(0)
 
         self._rendering_queue: _ThreadSafeQueue[_LifeCycleStateId] = _ThreadSafeQueue()
-        root_model_state = _new_root_model_state(self.root, self._schedule_render_task, self.reconnecting)
+        root_model_state = _new_root_model_state(self.root, self._schedule_render_task, self.reconnecting, self.client_state)
 
         self._root_life_cycle_state_id = root_id = root_model_state.life_cycle_state.id
         self._model_states_by_life_cycle_state_id = {root_id: root_model_state}
@@ -112,6 +112,9 @@ class Layout:
         del self._rendering_queue
         del self._root_life_cycle_state_id
         del self._model_states_by_life_cycle_state_id
+
+    def start_rendering(self) -> None:
+        self._schedule_render_task(self._root_life_cycle_state_id)
 
     async def deliver(self, event: LayoutEventMessage) -> None:
         """Dispatch an event to the targeted handler"""

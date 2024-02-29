@@ -118,6 +118,7 @@ class WebsocketServer:
                 await self._do_state_rebuild_for_reconnection(layout)
             else:
                 logger.info("Handshake: new connection")
+                layout.start_rendering()
         else:
             logger.warning(f"Unexpected type when expecting reconnecting-check: {result['type']}")
         await self._indicate_ready()
@@ -137,6 +138,7 @@ class WebsocketServer:
         client_state = client_state_msg["value"]
         layout.reconnecting = True
         layout.client_state = client_state
+        layout.start_rendering()
         await layout.render()
         layout.reconnecting = False
         layout.client_state = {}

@@ -140,7 +140,7 @@ class LifeCycleHook:
         self._effect_stops: list[Event] = []
         self._render_access = Semaphore(1)  # ensure only one render at a time
         self.reconnecting = reconnecting
-        self._client_state = client_state or {}
+        self.client_state = client_state or {}
 
     def schedule_render(self) -> None:
         if self._scheduled_render:
