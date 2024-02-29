@@ -7,9 +7,12 @@ from warnings import warn
 
 from anyio import create_task_group
 from anyio.abc import TaskGroup
+from reactpy.backend.hooks import ConnectionContext
+from reactpy.backend.types import Connection
 
 from reactpy.config import REACTPY_DEBUG_MODE
-from reactpy.core.types import LayoutEventMessage, LayoutType, LayoutUpdateMessage, ReconnectingCheckMessage
+from reactpy.core.layout import Layout
+from reactpy.core.types import LayoutEventMessage, LayoutType, LayoutUpdateMessage, ReconnectingCheckMessage, RootComponentConstructor
 
 logger = getLogger(__name__)
 
@@ -83,19 +86,40 @@ async def _single_incoming_loop(
         task_group.start_soon(layout.deliver, await recv())
 
 
-async def handshake(
-    send: SendCoroutine,
-    recv: RecvCoroutine,
-) -> None:
-    await send({"type": "reconnecting-check"})
-    result = await recv()
-    if result['type'] == "reconnecting-check":
-        if result["value"] == "yes":
-            await do_reconnection(send, recv)
+class WebsocketServer:
+    def __init__(self, send: SendCoroutine, recv: RecvCoroutine) -> None:
+        self._send = send
+        self._recv = recv
+
+    async def handle_connection(self, connection: Connection, constructor: RootComponentConstructor):
+        await self._handshake()
+        await serve_layout(
+            Layout(
+                ConnectionContext(
+                    constructor(),
+                    value=connection,
+                )
+            ),
+            self._send,
+            self._recv,
+        )
+
+    async def _handshake(
+        self,
+    ) -> None:
+        await self._send({"type": "reconnecting-check"})
+        result = await self._recv()
+        if result['type'] == "reconnecting-check":
+            if result["value"] == "yes":
+                logger.info("Handshake: Doing state rebuild for reconnection")
+                await self._do_state_rebuild_for_reconnection()
+            else:
+                logger.info("Handshake: new connection")
+        else:
+            logger.warning(f"Unexpected type when expecting reconnecting-check: {result['type']}")
 
 
-async def do_reconnection(
-    send: SendCoroutine,
-    recv: RecvCoroutine,
-) -> None:
-    pass
+    async def _do_state_rebuild_for_reconnection(
+        self,
+    ) -> None:
+        pass

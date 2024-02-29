@@ -38,6 +38,11 @@ __all__ = [
 
 logger = getLogger(__name__)
 
+
+class ReconnectingOnly:
+    """Class for when an effect should only be applied on reconnection to the server"""
+
+
 _Type = TypeVar("_Type")
 
 
@@ -132,8 +137,12 @@ def use_effect(
         If not function is provided, a decorator. Otherwise ``None``.
     """
     hook = current_hook()
-
-    dependencies = _try_to_infer_closure_values(function, dependencies)
+    if hook.reconnecting:
+        if dependencies is not ReconnectingOnly:
+            return
+        dependencies = None
+    else:
+        dependencies = _try_to_infer_closure_values(function, dependencies)
     memoize = use_memo(dependencies=dependencies)
     last_clean_callback: Ref[_EffectCleanFunc | None] = use_ref(None)
 

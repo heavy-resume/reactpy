@@ -136,6 +136,7 @@ export class SimpleReactPyClient
   private messageQueue: any[] = [];
   private socketLoopIntervalId?: number | null;
   private sleeping: boolean;
+  private isReconnecting: boolean;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
@@ -152,8 +153,16 @@ export class SimpleReactPyClient
     this.lastMessageTime = Date.now()
     this.reconnectOptions = props.reconnectOptions
     this.sleeping = false;
+    this.isReconnecting = false;
+
+    this.onMessage("reconnecting-check", () => { this.indicateReconnect() })
 
     this.reconnect()
+  }
+
+  indicateReconnect(): void {
+    const isReconnecting = this.isReconnecting ? "yes" : "no";
+    this.sendMessage({ "type": "reconnecting-check", "value": isReconnecting })
   }
 
   socketLoop(): void {
@@ -183,6 +192,7 @@ export class SimpleReactPyClient
       url: this.urls.stream,
       onOpen: onOpen,
       onClose: () => {
+        this.isReconnecting = true;
         if (this.socketLoopIntervalId)
           clearInterval(this.socketLoopIntervalId);
         if (!this.sleeping) {
