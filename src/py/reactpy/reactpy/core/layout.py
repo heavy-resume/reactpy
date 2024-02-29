@@ -172,7 +172,7 @@ class Layout:
             path=new_state.patch_path,
             model=new_state.model.current,
             state_vars={
-                x.key: x.value for x in new_state.life_cycle_state.hook._state if getattr(x, "key", None)
+                x.key: x.value for x in new_state.life_cycle_state.hook._state if getattr(x, "key", None) and isinstance(x.value, str)
             }
         )
 
