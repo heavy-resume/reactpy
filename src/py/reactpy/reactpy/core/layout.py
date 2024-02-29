@@ -171,6 +171,9 @@ class Layout:
             type="layout-update",
             path=new_state.patch_path,
             model=new_state.model.current,
+            state_vars={
+                x.key: x.value for x in new_state.life_cycle_state.hook._state if getattr(x, "key", None)
+            }
         )
 
     async def _render_component(

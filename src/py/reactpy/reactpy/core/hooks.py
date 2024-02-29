@@ -57,7 +57,7 @@ def use_state(initial_value: Callable[[], _Type]) -> State[_Type]: ...
 def use_state(initial_value: _Type) -> State[_Type]: ...
 
 
-def use_state(initial_value: _Type | Callable[[], _Type]) -> State[_Type]:
+def use_state(initial_value: _Type | Callable[[], _Type], *, server_only: bool = False) -> State[_Type]:
     """See the full :ref:`Use State` docs for details
 
     Parameters:
@@ -69,8 +69,12 @@ def use_state(initial_value: _Type | Callable[[], _Type]) -> State[_Type]:
     Returns:
         A tuple containing the current state and a function to update it.
     """
-    caller_info = get_caller_info()
-    current_state = _use_const(lambda: _CurrentState(md5(caller_info.encode()).hexdigest(), initial_value))
+    if server_only:
+        key = None
+    else:
+        caller_info = get_caller_info()
+        key = md5(caller_info.encode()).hexdigest()
+    current_state = _use_const(lambda: _CurrentState(key, initial_value))
     return State(current_state.value, current_state.dispatch)
 
 
@@ -82,11 +86,11 @@ def get_caller_info():
 
 
 class _CurrentState(Generic[_Type]):
-    __slots__ = "value", "dispatch"
+    __slots__ = "key", "value", "dispatch"
 
     def __init__(
         self,
-        key: str,
+        key: str | None,
         initial_value: _Type | Callable[[], _Type],
     ) -> None:
         self.key = key
