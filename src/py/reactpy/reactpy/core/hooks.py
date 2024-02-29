@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Coroutine, Sequence
+from hashlib import md5
+import inspect
 from logging import getLogger
+import sys
 from types import FunctionType
 from typing import (
     TYPE_CHECKING,
@@ -66,8 +69,16 @@ def use_state(initial_value: _Type | Callable[[], _Type]) -> State[_Type]:
     Returns:
         A tuple containing the current state and a function to update it.
     """
-    current_state = _use_const(lambda: _CurrentState(initial_value))
+    caller_info = get_caller_info()
+    current_state = _use_const(lambda: _CurrentState(md5(caller_info.encode()).hexdigest(), initial_value))
     return State(current_state.value, current_state.dispatch)
+
+
+def get_caller_info():
+    # Get the current stack frame and then the frame above it
+    caller_frame = sys._getframe(2)
+    # Extract the relevant information: file path and line number
+    return f"{caller_frame.f_code.co_filename} {caller_frame.f_lineno}"
 
 
 class _CurrentState(Generic[_Type]):
@@ -75,8 +86,10 @@ class _CurrentState(Generic[_Type]):
 
     def __init__(
         self,
+        key: str,
         initial_value: _Type | Callable[[], _Type],
     ) -> None:
+        self.key = key
         if callable(initial_value):
             self.value = initial_value()
         else:

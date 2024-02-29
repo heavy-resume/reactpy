@@ -167,11 +167,11 @@ class Layout:
         if REACTPY_CHECK_VDOM_SPEC.current:
             validate_vdom_json(new_state.model.current)
 
-        return {
-            "type": "layout-update",
-            "path": new_state.patch_path,
-            "model": new_state.model.current,
-        }
+        return LayoutUpdateMessage(
+            type="layout-update",
+            path=new_state.patch_path,
+            model=new_state.model.current,
+        )
 
     async def _render_component(
         self,
