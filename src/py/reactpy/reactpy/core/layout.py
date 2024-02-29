@@ -289,7 +289,7 @@ class Layout:
             if event in old_state.targets_by_event:
                 target = old_state.targets_by_event[event]
             else:
-                target = uuid4().hex if handler.target is None else handler.target
+                target = new_state.patch_path + event if handler.target is None else handler.target
             new_state.targets_by_event[event] = target
             self._event_handlers[target] = handler
             model_event_handlers[event] = {
@@ -310,7 +310,7 @@ class Layout:
 
         model_event_handlers = new_state.model.current["eventHandlers"] = {}
         for event, handler in handlers_by_event.items():
-            target = uuid4().hex if handler.target is None else handler.target
+            target = new_state.patch_path + event if handler.target is None else handler.target
             new_state.targets_by_event[event] = target
             self._event_handlers[target] = handler
             model_event_handlers[event] = {
