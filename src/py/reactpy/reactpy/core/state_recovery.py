@@ -48,14 +48,9 @@ class StateRecoveryManager:
         )
 
     def _map_objects_to_ids(self, serializable_objects: Iterable[type]) -> dict:
-        self._object_to_id = {
-            obj: str(id(obj)).encode("utf-8") for obj in serializable_objects
-        }
-        self._type_id_to_object = {
-            str(id(obj)).encode("utf-8"): obj for obj in serializable_objects
-        }
-
-        for idx, typ in enumerate((None, str, int, float, bool, list, tuple)):
+        for idx, typ in enumerate(
+            (None, str, int, float, bool, list, tuple, *serializable_objects)
+        ):
             idx_as_bytes = str(idx).encode("utf-8")
             self._object_to_id[typ] = idx_as_bytes
             self._type_id_to_object[idx_as_bytes] = typ
@@ -134,13 +129,17 @@ class StateRecoverySerializer:
             signature,
         )
 
-    def deserialize_client_state(self, state_vars: dict[str, tuple[str, str]]) -> None:
+    def deserialize_client_state(
+        self, state_vars: dict[str, tuple[str, str, str]]
+    ) -> None:
         return {
-            key: self._deserialize(key, data, signature)
-            for key, (data, signature) in state_vars.items()
+            key: self._deserialize(key, type_id.encode("utf-8"), data, signature)
+            for key, (type_id, data, signature) in state_vars.items()
         }
 
-    def _deserialize(self, key: str, type_id: int, data: bytes, signature: str) -> Any:
+    def _deserialize(
+        self, key: str, type_id: bytes, data: bytes, signature: str
+    ) -> Any:
         try:
             typ = self._type_id_to_object[type_id]
         except KeyError as err:
