@@ -127,14 +127,15 @@ class WebsocketServer:
                 constructor(),
                 value=connection,
             ),
-            (
-                self._state_recovery_manager.create_serializer(self._salt)
-                if self._state_recovery_manager
-                else None
-            ),
         )
         async with layout:
             await self._handshake(layout)
+            # salt may be set to client's old salt during handshake
+            assert self._salt is not None
+            if self._state_recovery_manager:
+                layout.set_recovery_serializer(
+                    self._state_recovery_manager.create_serializer(self._salt)
+                )
             await serve_layout(
                 layout,
                 self._send,

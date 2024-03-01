@@ -74,7 +74,6 @@ class Layout:
     def __init__(
         self,
         root: ComponentType,
-        state_recovery_serializer: StateRecoverySerializer | None = None,
     ) -> None:
         super().__init__()
         if not isinstance(root, ComponentType):
@@ -82,8 +81,11 @@ class Layout:
             raise TypeError(msg)
         self.root = root
         self.reconnecting = False
-        self._state_recovery_serializer = state_recovery_serializer
+        self._state_recovery_serializer = None
         self.client_state = {}
+
+    def set_recovery_serializer(self, serializer: StateRecoverySerializer) -> None:
+        self._state_recovery_serializer = serializer
 
     async def __aenter__(self) -> Layout:
         # create attributes here to avoid access before entering context manager
