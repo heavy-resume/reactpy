@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Awaitable
-from logging import getLogger
 import random
 import string
+from collections.abc import Awaitable
+from logging import getLogger
 from typing import Callable
 from warnings import warn
 
@@ -117,7 +117,7 @@ class WebsocketServer:
         self._send = send
         self._recv = recv
         self._state_recovery_manager = state_recovery_manager
-        self._salt = "".join(random.choices(string.ascii_letters + string.digits, k=8))
+        self._salt: str | None = None
 
     async def handle_connection(
         self, connection: Connection, constructor: RootComponentConstructor
@@ -144,6 +144,7 @@ class WebsocketServer:
     async def _handshake(self, layout: Layout) -> None:
         await self._send(ReconnectingCheckMessage(type="reconnecting-check"))
         result = await self._recv()
+        self._salt = "".join(random.choices(string.ascii_letters + string.digits, k=8))
         if result["type"] == "reconnecting-check":
             if result["value"] == "yes":
                 if self._state_recovery_manager is None:
@@ -153,7 +154,7 @@ class WebsocketServer:
                     layout.start_rendering()
                 else:
                     logger.info("Handshake: Doing state rebuild for reconnection")
-                    await self._do_state_rebuild_for_reconnection(layout)
+                    self._salt = await self._do_state_rebuild_for_reconnection(layout)
             else:
                 logger.info("Handshake: new connection")
                 layout.start_rendering()
@@ -166,7 +167,8 @@ class WebsocketServer:
     async def _indicate_ready(self) -> None:
         await self._send(IsReadyMessage(type="is-ready", salt=self._salt))
 
-    async def _do_state_rebuild_for_reconnection(self, layout: Layout) -> None:
+    async def _do_state_rebuild_for_reconnection(self, layout: Layout) -> str:
+        salt = self._salt
         await self._send(ClientStateMessage(type="client-state"))
         client_state_msg = await self._recv()
         if client_state_msg["type"] != "client-state":
@@ -184,7 +186,10 @@ class WebsocketServer:
             layout.client_state = client_state
         except StateRecoveryFailureError:
             logger.warning("State recovery failed")
+        else:
+            salt = client_state_msg["salt"]
         layout.start_rendering()
         await layout.render()
         layout.reconnecting = False
         layout.client_state = {}
+        return salt
