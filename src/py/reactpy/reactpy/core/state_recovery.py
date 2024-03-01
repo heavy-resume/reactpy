@@ -109,12 +109,12 @@ class StateRecoverySerializer:
         self._default_serializer = default_serializer
         self._deserializer_map = deserializer_map or {}
 
-    def serialize_state_vars(self, state_vars: Iterable[Any]) -> tuple[str, str]:
+    def serialize_state_vars(
+        self, state_vars: dict[str, Any]
+    ) -> dict[str, tuple[str, str, str]]:
         result = {}
-        for var in state_vars:
-            state_key = getattr(var, "key", None)
-            if state_key is not None:
-                result[state_key] = self._serialize(state_key, var.value)
+        for key, value in state_vars.items():
+            result[key] = self._serialize(key, value)
         return result
 
     def _serialize(self, key: str, obj: object) -> tuple[str, str, str]:

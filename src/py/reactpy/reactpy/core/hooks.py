@@ -22,6 +22,7 @@ from typing_extensions import TypeAlias
 
 from reactpy.config import REACTPY_DEBUG_MODE
 from reactpy.core._life_cycle_hook import current_hook
+from reactpy.core.state_recovery import StateRecoveryFailureError
 from reactpy.core.types import Context, Key, State, VdomDict
 from reactpy.utils import Ref
 
@@ -78,8 +79,12 @@ def use_state(
         key = md5(caller_info.encode(), usedforsecurity=False).hexdigest()
         hook = current_hook()
         if hook.reconnecting:
-            # TODO: if key is missing, maybe raise exception and abort recovery?
-            initial_value = hook.client_state.get(key, initial_value)
+            try:
+                initial_value = hook.client_state[key]
+            except KeyError as err:
+                raise StateRecoveryFailureError(
+                    f"Missing expected key {key} on client"
+                ) from err
     current_state = _use_const(lambda: _CurrentState(key, initial_value))
     return State(current_state.value, current_state.dispatch)
 
@@ -89,7 +94,7 @@ def get_caller_info():
     caller_frame = sys._getframe(2)
     render_frame = sys._getframe(5)
     # Extract the relevant information: file path and line number
-    return f"{caller_frame.f_code.co_filename} {caller_frame.f_lineno} {render_frame.f_locals['new_state'].patch_path}
+    return f"{caller_frame.f_code.co_filename} {caller_frame.f_lineno} {render_frame.f_locals['new_state'].patch_path}"
 
 
 class _CurrentState(Generic[_Type]):
@@ -115,7 +120,7 @@ class _CurrentState(Generic[_Type]):
                 next_value = new
             if not strictly_equal(next_value, self.value):
                 self.value = next_value
-                hook.schedule_render()
+                hook.schedule_render(self)
 
         self.dispatch = dispatch
 
@@ -498,8 +503,12 @@ def use_ref(initial_value: _Type, server_only: bool = True) -> Ref[_Type]:
         key = md5(caller_info.encode(), usedforsecurity=False).hexdigest()
         hook = current_hook()
         if hook.reconnecting:
-            # TODO: if key is missing, maybe raise exception and abort recovery?
-            initial_value = hook.client_state.get(key, initial_value)
+            try:
+                initial_value = hook.client_state[key]
+            except KeyError as err:
+                raise StateRecoveryFailureError(
+                    f"Missing expected key {key} on client"
+                ) from err
     return _use_const(lambda: Ref(initial_value, key))
 
 

@@ -7,6 +7,7 @@ from typing import Any, Callable, Protocol, TypeVar
 from anyio import Semaphore
 
 from reactpy.core._thread_local import ThreadLocal
+from reactpy.core.hooks import _CurrentState
 from reactpy.core.types import ComponentType, Context, ContextProviderType
 
 T = TypeVar("T")
@@ -118,7 +119,8 @@ class LifeCycleHook:
         "_state",
         "component",
         "reconnecting",
-        "client_state"
+        "client_state",
+        "_updated_states",
     )
 
     component: ComponentType
@@ -127,7 +129,7 @@ class LifeCycleHook:
         self,
         schedule_render: Callable[[], None],
         reconnecting: bool,
-        client_state: dict[str, Any]
+        client_state: dict[str, Any],
     ) -> None:
         self._context_providers: dict[Context[Any], ContextProviderType[Any]] = {}
         self._schedule_render_callback = schedule_render
@@ -141,8 +143,11 @@ class LifeCycleHook:
         self._render_access = Semaphore(1)  # ensure only one render at a time
         self.reconnecting = reconnecting
         self.client_state = client_state or {}
+        self._updated_states = {}
 
-    def schedule_render(self) -> None:
+    def schedule_render(self, updated_state: _CurrentState) -> None:
+        if updated_state.key:
+            self._updated_states[updated_state.key] = updated_state.value
         if self._scheduled_render:
             return None
         try:
