@@ -157,6 +157,7 @@ export class SimpleReactPyClient
   private sleeping: boolean;
   private isReconnecting: boolean;
   private isReady: boolean;
+  private salt: string;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
@@ -175,9 +176,10 @@ export class SimpleReactPyClient
     this.sleeping = false;
     this.isReconnecting = false;
     this.isReady = false
+    this.salt = "";
 
     this.onMessage(messageTypes.reconnectingCheck, () => { this.indicateReconnect() })
-    this.onMessage(messageTypes.isReady, () => { this.isReady = true });
+    this.onMessage(messageTypes.isReady, (salt) => { this.isReady = true; this.salt = salt; });
     this.onMessage(messageTypes.clientState, () => { this.sendClientState() });
 
     this.reconnect()
@@ -193,7 +195,8 @@ export class SimpleReactPyClient
       return;
     this.transmitMessage({
       "type": "client-state",
-      "value": this.stateVars
+      "value": this.stateVars,
+      "salt": this.salt
     });
   }
 

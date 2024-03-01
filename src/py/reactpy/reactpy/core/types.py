@@ -240,6 +240,8 @@ class IsReadyMessage(TypedDict):
 
     type: Literal["is-ready"]
 
+    salt: str
+
 
 class LayoutEventMessage(TypedDict):
     """Message describing an event originating from an element in the layout"""

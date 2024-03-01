@@ -117,7 +117,7 @@ class WebsocketServer:
         self._send = send
         self._recv = recv
         self._state_recovery_manager = state_recovery_manager
-        self._salt = random.choices(string.ascii_letters + string.digits, k=8)
+        self._salt = "".join(random.choices(string.ascii_letters + string.digits, k=8))
 
     async def handle_connection(
         self, connection: Connection, constructor: RootComponentConstructor
@@ -161,10 +161,10 @@ class WebsocketServer:
             logger.warning(
                 f"Unexpected type when expecting reconnecting-check: {result['type']}"
             )
-        await self._indicate_ready()
+        await self._indicate_ready(),
 
     async def _indicate_ready(self) -> None:
-        await self._send(IsReadyMessage(type="is-ready"))
+        await self._send(IsReadyMessage(type="is-ready", salt=self._salt))
 
     async def _do_state_rebuild_for_reconnection(self, layout: Layout) -> None:
         await self._send(ClientStateMessage(type="client-state"))
