@@ -87,8 +87,9 @@ def use_state(
 def get_caller_info():
     # Get the current stack frame and then the frame above it
     caller_frame = sys._getframe(2)
+    render_frame = sys._getframe(5)
     # Extract the relevant information: file path and line number
-    return f"{caller_frame.f_code.co_filename} {caller_frame.f_lineno}"
+    return f"{caller_frame.f_code.co_filename} {caller_frame.f_lineno} {render_frame.f_locals['new_state'].patch_path}
 
 
 class _CurrentState(Generic[_Type]):
@@ -165,6 +166,8 @@ def use_effect(
             return
         dependencies = None
     else:
+        if dependencies is ReconnectingOnly:
+            return
         dependencies = _try_to_infer_closure_values(function, dependencies)
     memoize = use_memo(dependencies=dependencies)
     last_clean_callback: Ref[_EffectCleanFunc | None] = use_ref(None)
@@ -479,7 +482,7 @@ class _Memo(Generic[_Type]):
             return False
 
 
-def use_ref(initial_value: _Type, server_only: bool = False) -> Ref[_Type]:
+def use_ref(initial_value: _Type, server_only: bool = True) -> Ref[_Type]:
     """See the full :ref:`Use State` docs for details
 
     Parameters:
