@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import logging
 from asyncio import Event, Task, create_task, gather
-from typing import Any, Callable, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar
 
 from anyio import Semaphore
 
 from reactpy.core._thread_local import ThreadLocal
-from reactpy.core.hooks import _CurrentState
 from reactpy.core.types import ComponentType, Context, ContextProviderType
+
+if TYPE_CHECKING:
+    from reactpy.core.hooks import _CurrentState
 
 T = TypeVar("T")
 
