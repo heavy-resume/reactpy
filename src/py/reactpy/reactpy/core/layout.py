@@ -540,7 +540,7 @@ def _new_root_model_state(
         children_by_key={},
         targets_by_event={},
         life_cycle_state=_make_life_cycle_state(
-            component, schedule_render, reconnecting, client_state
+            component, schedule_render, reconnecting, client_state, {}
         ),
     )
 
@@ -563,7 +563,11 @@ def _make_component_model_state(
         children_by_key={},
         targets_by_event={},
         life_cycle_state=_make_life_cycle_state(
-            component, schedule_render, reconnecting, client_state
+            component,
+            schedule_render,
+            reconnecting,
+            client_state,
+            parent.life_cycle_state.hook._updated_states,
         ),
     )
 
@@ -608,7 +612,11 @@ def _update_component_model_state(
             _update_life_cycle_state(old_model_state.life_cycle_state, new_component)
             if old_model_state.is_component_state
             else _make_life_cycle_state(
-                new_component, schedule_render, reconnecting, client_state
+                new_component,
+                schedule_render,
+                reconnecting,
+                client_state,
+                new_parent.life_cycle_state.hook._updated_states,
             )
         ),
     )
@@ -725,6 +733,7 @@ def _make_life_cycle_state(
     schedule_render: Callable[[_LifeCycleStateId], None],
     reconnecting: bool,
     client_state: dict[str, Any],
+    updated_states: dict[str, Any],
 ) -> _LifeCycleState:
     life_cycle_state_id = _LifeCycleStateId(uuid4().hex)
     return _LifeCycleState(
@@ -733,6 +742,7 @@ def _make_life_cycle_state(
             lambda: schedule_render(life_cycle_state_id),
             reconnecting=reconnecting,
             client_state=client_state,
+            updated_states=updated_states,
         ),
         component,
     )
