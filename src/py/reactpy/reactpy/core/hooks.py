@@ -477,7 +477,7 @@ class _Memo(Generic[_Type]):
             return False
 
 
-def use_ref(initial_value: _Type) -> Ref[_Type]:
+def use_ref(initial_value: _Type, server_only: bool = False) -> Ref[_Type]:
     """See the full :ref:`Use State` docs for details
 
     Parameters:
@@ -486,6 +486,15 @@ def use_ref(initial_value: _Type) -> Ref[_Type]:
     Returns:
         A :class:`Ref` object.
     """
+    if server_only:
+        key = None
+    else:
+        caller_info = get_caller_info()
+        key = md5(caller_info.encode(), usedforsecurity=False).hexdigest()
+        hook = current_hook()
+        if hook.reconnecting:
+            # TODO: if key is missing, maybe raise exception and abort recovery?
+            initial_value = hook.client_state.get(key, initial_value)
     return _use_const(lambda: Ref(initial_value))
 
 

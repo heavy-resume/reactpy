@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Callable
+from uuid import UUID
 
 import orjson
 import pyotp
@@ -53,7 +54,7 @@ class StateRecoveryManager:
         self._object_to_type_id = {}
         self._type_id_to_object = {}
         for idx, typ in enumerate(
-            (None, str, int, float, bool, list, tuple, *serializable_objects)
+            (None, str, int, float, bool, list, tuple, UUID, *serializable_objects)
         ):
             idx_as_bytes = str(idx).encode("utf-8")
             self._object_to_type_id[typ] = idx_as_bytes
