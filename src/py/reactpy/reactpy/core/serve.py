@@ -14,7 +14,7 @@ from reactpy.backend.hooks import ConnectionContext
 from reactpy.backend.types import Connection
 from reactpy.config import REACTPY_DEBUG_MODE
 from reactpy.core.layout import Layout
-from reactpy.core.state_recovery import StateRecoveryManager
+from reactpy.core.state_recovery import StateRecoveryFailureError, StateRecoveryManager
 from reactpy.core.types import (
     ClientStateMessage,
     IsReadyMessage,
@@ -175,12 +175,15 @@ class WebsocketServer:
             )
             return
         state_vars = client_state_msg["value"]
-        serializer = self._state_recovery_manager.create_serializer(
-            client_state_msg["salt"]
-        )
-        client_state = serializer.deserialize_client_state(state_vars)
-        layout.reconnecting = True
-        layout.client_state = client_state
+        try:
+            serializer = self._state_recovery_manager.create_serializer(
+                client_state_msg["salt"]
+            )
+            client_state = serializer.deserialize_client_state(state_vars)
+            layout.reconnecting = True
+            layout.client_state = client_state
+        except StateRecoveryFailureError:
+            logger.warning("State recovery failed")
         layout.start_rendering()
         await layout.render()
         layout.reconnecting = False
