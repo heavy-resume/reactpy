@@ -111,11 +111,10 @@ class StateRecoverySerializer:
         for var in state_vars:
             state_key = getattr(var, "key", None)
             if state_key is not None:
-                serialized_value, signature = self._serialize(state_key, var.value)
-                result[state_key] = (serialized_value, signature)
+                result[state_key] = self._serialize(state_key, var.value)
         return result
 
-    def _serialize(self, key: str, obj: object) -> tuple[str, str]:
+    def _serialize(self, key: str, obj: object) -> tuple[str, str, str]:
         obj_type = type(obj)
         for t in obj_type.__mro__:
             type_id = self._object_to_type_id.get(t)
@@ -129,7 +128,11 @@ class StateRecoverySerializer:
                 f"Serialized object {obj} is too long (length: {len(result)})"
             )
         signature = self._sign_serialization(key, type_id, result)
-        return (base64.urlsafe_b64encode(result).decode("utf-8"), signature)
+        return (
+            type_id.decode("utf-8"),
+            base64.urlsafe_b64encode(result).decode("utf-8"),
+            signature,
+        )
 
     def deserialize_client_state(self, state_vars: dict[str, tuple[str, str]]) -> None:
         return {
