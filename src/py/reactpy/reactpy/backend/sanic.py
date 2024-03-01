@@ -24,11 +24,15 @@ from reactpy.backend._common import (
     safe_web_modules_dir_path,
     serve_with_uvicorn,
 )
-from reactpy.backend.hooks import ConnectionContext
 from reactpy.backend.hooks import use_connection as _use_connection
 from reactpy.backend.types import Connection, Location
-from reactpy.core.layout import Layout
-from reactpy.core.serve import RecvCoroutine, SendCoroutine, Stop, WebsocketServer, serve_layout
+from reactpy.core.serve import (
+    RecvCoroutine,
+    SendCoroutine,
+    Stop,
+    WebsocketServer,
+)
+from reactpy.core.state_recovery import StateRecoveryManager
 from reactpy.core.types import RootComponentConstructor
 
 logger = logging.getLogger(__name__)
@@ -51,6 +55,7 @@ def configure(
     app: Sanic[Any, Any],
     component: RootComponentConstructor,
     options: Options | None = None,
+    state_recovery_manager: StateRecoveryManager | None = None,
 ) -> None:
     """Configure an application instance to display the given component"""
     options = options or Options()
@@ -59,7 +64,9 @@ def configure(
     api_bp = Blueprint(f"reactpy_api_{id(app)}", url_prefix=str(PATH_PREFIX))
 
     _setup_common_routes(api_bp, spa_bp, options)
-    _setup_single_view_dispatcher_route(api_bp, component, options)
+    _setup_single_view_dispatcher_route(
+        api_bp, component, options, state_recovery_manager
+    )
 
     app.blueprint([spa_bp, api_bp])
 
@@ -159,6 +166,7 @@ def _setup_single_view_dispatcher_route(
     api_blueprint: Blueprint,
     constructor: RootComponentConstructor,
     options: Options,
+    state_recovery_manager: StateRecoveryManager | None,
 ) -> None:
     async def model_stream(
         request: request.Request[Any, Any],
@@ -172,21 +180,17 @@ def _setup_single_view_dispatcher_route(
 
         send, recv = _make_send_recv_callbacks(socket)
 
-        # TODO: reconnecting handshake
-        server = WebsocketServer(send, recv)
+        server = WebsocketServer(send, recv, state_recovery_manager)
         await server.handle_connection(
             Connection(
                 scope=scope,
                 location=Location(
                     pathname=f"/{path[len(options.url_prefix):]}",
-                    search=(
-                        f"?{request.query_string}"
-                        if request.query_string
-                        else ""
-                    ),
+                    search=(f"?{request.query_string}" if request.query_string else ""),
                 ),
                 carrier=_SanicCarrier(request, socket),
-            ), constructor
+            ),
+            constructor,
         )
         # await serve_layout(
         #     Layout(
