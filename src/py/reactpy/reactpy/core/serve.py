@@ -182,16 +182,16 @@ class WebsocketServer:
                 client_state_msg["salt"]
             )
             client_state = serializer.deserialize_client_state(state_vars)
-            layout.reconnecting = True
+            layout.reconnecting.set_current(True)
             layout.client_state = client_state
         except StateRecoveryFailureError:
             logger.exception("State recovery failed")
-            layout.reconnecting = False
+            layout.reconnecting.set_current(False)
             layout.client_state = {}
         else:
             salt = client_state_msg["salt"]
         layout.start_rendering()
         await layout.render()
-        layout.reconnecting = False
+        layout.reconnecting.set_current(False)
         layout.client_state = {}
         return salt

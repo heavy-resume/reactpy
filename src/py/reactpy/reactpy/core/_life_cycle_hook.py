@@ -131,8 +131,9 @@ class LifeCycleHook:
     def __init__(
         self,
         schedule_render: Callable[[], None],
-        reconnecting: bool,
+        reconnecting: Ref,
         client_state: dict[str, Any],
+        updated_states: dict[str, Any],
     ) -> None:
         self._context_providers: dict[Context[Any], ContextProviderType[Any]] = {}
         self._schedule_render_callback = schedule_render
@@ -146,7 +147,7 @@ class LifeCycleHook:
         self._render_access = Semaphore(1)  # ensure only one render at a time
         self.reconnecting = reconnecting
         self.client_state = client_state or {}
-        self._updated_states = {}
+        self._updated_states = updated_states
 
     def add_state_update(self, updated_state: _CurrentState | Ref) -> None:
         if updated_state.key:

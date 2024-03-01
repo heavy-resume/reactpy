@@ -80,7 +80,7 @@ class Layout:
             msg = f"Expected a ComponentType, not {type(root)!r}."
             raise TypeError(msg)
         self.root = root
-        self.reconnecting = False
+        self.reconnecting = Ref(False)
         self._state_recovery_serializer = None
         self.client_state = {}
 
@@ -214,6 +214,7 @@ class Layout:
         await life_cycle_hook.affect_component_will_render(component)
         exit_stack.push_async_callback(life_cycle_hook.affect_layout_did_render)
         try:
+            patch_path_for_state = new_state.patch_path  # type: ignore  # noqa
             raw_model = component.render()
             # wrap the model in a fragment (i.e. tagName="") to ensure components have
             # a separate node in the model state tree. This could be removed if this
@@ -501,8 +502,11 @@ class Layout:
 
             if model_state.is_component_state:
                 life_cycle_state = model_state.life_cycle_state
-                del self._model_states_by_life_cycle_state_id[life_cycle_state.id]
-                await life_cycle_state.hook.affect_component_will_unmount()
+                try:
+                    del self._model_states_by_life_cycle_state_id[life_cycle_state.id]
+                    await life_cycle_state.hook.affect_component_will_unmount()
+                except KeyError:
+                    pass  # sideeffect of reusing model states
 
             to_unmount.extend(model_state.children_by_key.values())
 
@@ -554,6 +558,7 @@ def _make_component_model_state(
     reconnecting: bool,
     client_state: dict[str, Any],
 ) -> _ModelState:
+    updated_states = parent.life_cycle_state.hook._updated_states
     return _ModelState(
         parent=parent,
         index=index,
@@ -567,7 +572,7 @@ def _make_component_model_state(
             schedule_render,
             reconnecting,
             client_state,
-            parent.life_cycle_state.hook._updated_states,
+            updated_states,
         ),
     )
 
@@ -635,6 +640,7 @@ def _make_element_model_state(
         patch_path=f"{parent.patch_path}/children/{index}",
         children_by_key={},
         targets_by_event={},
+        life_cycle_state=parent.life_cycle_state,
     )
 
 
@@ -651,6 +657,7 @@ def _update_element_model_state(
         patch_path=old_model_state.patch_path,
         children_by_key={},
         targets_by_event={},
+        life_cycle_state=new_parent.life_cycle_state,
     )
 
 
@@ -679,7 +686,7 @@ class _ModelState:
         patch_path: str,
         children_by_key: dict[Key, _ModelState],
         targets_by_event: dict[str, str],
-        life_cycle_state: _LifeCycleState | None = None,
+        life_cycle_state: _LifeCycleState,
     ):
         self.index = index
         """The index of the element amongst its siblings"""
@@ -706,9 +713,8 @@ class _ModelState:
             self._parent_ref = weakref(parent)
             """The parent model state"""
 
-        if life_cycle_state is not None:
-            self.life_cycle_state = life_cycle_state
-            """The state for the element's component (if it has one)"""
+        self.life_cycle_state = life_cycle_state
+        """The state for the element's component (if it has one)"""
 
     @property
     def is_component_state(self) -> bool:

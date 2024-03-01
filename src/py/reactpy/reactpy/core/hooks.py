@@ -75,10 +75,10 @@ def use_state(
     if server_only:
         key = None
     else:
+        hook = current_hook()
         caller_info = get_caller_info()
         key = md5(caller_info.encode(), usedforsecurity=False).hexdigest()
-        hook = current_hook()
-        if hook.reconnecting:
+        if hook.reconnecting.current:
             try:
                 initial_value = hook.client_state[key]
             except KeyError as err:
@@ -92,9 +92,10 @@ def use_state(
 def get_caller_info():
     # Get the current stack frame and then the frame above it
     caller_frame = sys._getframe(2)
-    render_frame = sys._getframe(5)
+    render_frame = sys._getframe(4)
+    patch_path = render_frame.f_locals["patch_path_for_state"]
     # Extract the relevant information: file path and line number
-    return f"{caller_frame.f_code.co_filename} {caller_frame.f_lineno} {render_frame.f_locals['new_state'].patch_path}"
+    return f"{caller_frame.f_code.co_filename} {caller_frame.f_lineno} {patch_path}"
 
 
 class _CurrentState(Generic[_Type]):
@@ -168,7 +169,7 @@ def use_effect(
         If not function is provided, a decorator. Otherwise ``None``.
     """
     hook = current_hook()
-    if hook.reconnecting:
+    if hook.reconnecting.current:
         if dependencies is not ReconnectingOnly:
             return
         dependencies = None
@@ -501,10 +502,10 @@ def use_ref(initial_value: _Type, server_only: bool = True) -> Ref[_Type]:
     if server_only:
         key = None
     else:
+        hook = current_hook()
         caller_info = get_caller_info()
         key = md5(caller_info.encode(), usedforsecurity=False).hexdigest()
-        hook = current_hook()
-        if hook.reconnecting:
+        if hook.reconnecting.current:
             try:
                 initial_value = hook.client_state[key]
             except KeyError as err:
