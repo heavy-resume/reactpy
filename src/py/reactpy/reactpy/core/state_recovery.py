@@ -28,7 +28,7 @@ class StateRecoveryManager:
         max_object_length: int = 512,
         default_serializer: Callable[[Any], bytes] | None = None,
     ) -> None:
-        self._pepper = pepper.encode("utf-8")
+        self._pepper = pepper
         self._max_objects = max_objects
         self._max_object_length = max_object_length
         self._otp_key = base64.b32encode(
@@ -71,6 +71,11 @@ class StateRecoveryManager:
         self._type_id_to_object[b"4"] = bool
 
     def _discover_otp_key(self) -> str:
+        """
+        Generate an OTP key by looking at the parent directory of where
+        ReactPy is installed and taking down the names and creation times
+        of everything in there.
+        """
         hasher = hashlib.sha256()
         parent_dir_of_root = Path(__file__).parent.parent.parent
         for thing in parent_dir_of_root.iterdir():
