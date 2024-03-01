@@ -8,7 +8,6 @@ from typing import Any, Callable, Generic, TypeVar, cast
 from lxml import etree
 from lxml.html import fromstring, tostring
 
-from reactpy.core._life_cycle_hook import current_hook
 from reactpy.core.types import VdomDict
 from reactpy.core.vdom import vdom
 
@@ -33,6 +32,8 @@ class Ref(Generic[_RefValue]):
     def __init__(
         self, initial_value: _RefValue = _UNDEFINED, key: str | None = None
     ) -> None:
+        from reactpy.core._life_cycle_hook import current_hook
+
         if initial_value is not _UNDEFINED:
             self.current = initial_value
             """The present value"""
@@ -50,6 +51,8 @@ class Ref(Generic[_RefValue]):
 
         This is nice to use in ``lambda`` functions.
         """
+        from reactpy.core._life_cycle_hook import current_hook
+
         old = self.current
         self.current = new
         if self.key:
