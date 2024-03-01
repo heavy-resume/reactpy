@@ -119,7 +119,7 @@ class StateRecoverySerializer:
 
     def _serialize(self, key: str, obj: object) -> tuple[str, str, str]:
         if obj is None:
-            return b"0", b"", b""
+            return "0", "", ""
         obj_type = type(obj)
         for t in obj_type.__mro__:
             type_id = self._object_to_type_id.get(t)
