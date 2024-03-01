@@ -61,7 +61,7 @@ export abstract class BaseReactPyClient implements ReactPyClient {
   abstract loadModule(moduleName: string): Promise<ReactPyModule>;
 
   updateStateVars(givenStateVars: object): void {
-    Object.assign(this.stateVars, givenStateVars);
+    this.stateVars = Object.assign(this.stateVars, givenStateVars);
     logger.log(this.stateVars);
   }
 

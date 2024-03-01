@@ -55,9 +55,7 @@ class StateRecoveryManager:
             str(id(obj)).encode("utf-8"): obj for obj in serializable_objects
         }
 
-        for idx, typ in (
-            None, str, int, float, bool, list, tuple
-        ):
+        for idx, typ in enumerate((None, str, int, float, bool, list, tuple)):
             idx_as_bytes = str(idx).encode("utf-8")
             self._object_to_id[typ] = idx_as_bytes
             self._type_id_to_object[idx_as_bytes] = typ
