@@ -43,8 +43,8 @@ __all__ = [
 logger = getLogger(__name__)
 
 
-class ReconnectingOnly:
-    """Class for when an effect should only be applied on reconnection to the server"""
+# Faux object used for dependency of reconnecting
+ReconnectingOnly = ["reconnecting-faux-class"]
 
 
 _Type = TypeVar("_Type")
