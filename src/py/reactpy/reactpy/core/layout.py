@@ -558,7 +558,9 @@ def _make_component_model_state(
     reconnecting: bool,
     client_state: dict[str, Any],
 ) -> _ModelState:
-    updated_states = parent.life_cycle_state.hook._updated_states
+    updated_states = (
+        parent.life_cycle_state or parent.parent_life_cycle_state
+    ).hook._updated_states
     return _ModelState(
         parent=parent,
         index=index,
@@ -621,7 +623,9 @@ def _update_component_model_state(
                 schedule_render,
                 reconnecting,
                 client_state,
-                new_parent.life_cycle_state.hook._updated_states,
+                (
+                    new_parent.life_cycle_state or new_parent.parent_life_cycle_state
+                ).hook._updated_states,
             )
         ),
     )
@@ -640,7 +644,9 @@ def _make_element_model_state(
         patch_path=f"{parent.patch_path}/children/{index}",
         children_by_key={},
         targets_by_event={},
-        life_cycle_state=parent.life_cycle_state,
+        parent_life_cycle_state=(
+            parent.life_cycle_state or parent.parent_life_cycle_state
+        ),
     )
 
 
@@ -657,7 +663,9 @@ def _update_element_model_state(
         patch_path=old_model_state.patch_path,
         children_by_key={},
         targets_by_event={},
-        life_cycle_state=new_parent.life_cycle_state,
+        parent_life_cycle_state=(
+            new_parent.life_cycle_state or new_parent.parent_life_cycle_state
+        ),
     )
 
 
@@ -672,6 +680,7 @@ class _ModelState:
         "index",
         "key",
         "life_cycle_state",
+        "parent_life_cycle_state",
         "model",
         "patch_path",
         "targets_by_event",
@@ -686,7 +695,8 @@ class _ModelState:
         patch_path: str,
         children_by_key: dict[Key, _ModelState],
         targets_by_event: dict[str, str],
-        life_cycle_state: _LifeCycleState,
+        life_cycle_state: _LifeCycleState | None = None,
+        parent_life_cycle_state: _LifeCycleState | None = None,
     ):
         self.index = index
         """The index of the element amongst its siblings"""
@@ -716,9 +726,11 @@ class _ModelState:
         self.life_cycle_state = life_cycle_state
         """The state for the element's component (if it has one)"""
 
+        self.parent_life_cycle_state = parent_life_cycle_state
+
     @property
     def is_component_state(self) -> bool:
-        return hasattr(self, "life_cycle_state")
+        return self.life_cycle_state is not None
 
     @property
     def parent(self) -> _ModelState:
