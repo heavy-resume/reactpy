@@ -37,6 +37,10 @@ class Ref(Generic[_RefValue]):
             """The present value"""
         self.key = key
 
+    @property
+    def value(self) -> Any:
+        return self.current
+
     def set_current(self, new: _RefValue) -> _RefValue:
         """Set the current value and return what is now the old value
 
