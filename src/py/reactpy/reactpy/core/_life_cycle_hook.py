@@ -177,7 +177,8 @@ class LifeCycleHook:
             self._state.append(result)
         else:
             # once finalized we iterate over each succesively used piece of state
-            result = self._state[-1]
+            result = self._state[self._current_state_index]
+        self._current_state_index += 1
         return result
 
     def add_effect(self, effect_func: EffectFunc) -> None:
@@ -219,7 +220,7 @@ class LifeCycleHook:
         """The component completed a render"""
         self.unset_current()
         self._rendered_atleast_once = True
-        self._state = [self._state[-1]] if self._state else []
+        self._current_state_index = 0
         self._render_access.release()
         del self.component
 

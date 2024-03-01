@@ -168,6 +168,8 @@ def use_effect(
     Returns:
         If not function is provided, a decorator. Otherwise ``None``.
     """
+    memoize = use_memo(dependencies=dependencies)
+    last_clean_callback: Ref[_EffectCleanFunc | None] = use_ref(None)
     hook = current_hook()
     if hook.reconnecting.current:
         if dependencies is not ReconnectingOnly:
@@ -177,8 +179,6 @@ def use_effect(
         if dependencies is ReconnectingOnly:
             return
         dependencies = _try_to_infer_closure_values(function, dependencies)
-    memoize = use_memo(dependencies=dependencies)
-    last_clean_callback: Ref[_EffectCleanFunc | None] = use_ref(None)
 
     def add_effect(function: _EffectApplyFunc) -> None:
         if not asyncio.iscoroutinefunction(function):
