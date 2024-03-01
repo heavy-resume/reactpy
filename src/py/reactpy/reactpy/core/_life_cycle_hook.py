@@ -140,7 +140,7 @@ class LifeCycleHook:
         self._scheduled_render = False
         self._rendered_atleast_once = False
         self._current_state_index = 0
-        self._state: tuple[Any, ...] = ()
+        self._state: list = []
         self._effect_funcs: list[EffectFunc] = []
         self._effect_tasks: list[Task[None]] = []
         self._effect_stops: list[Event] = []
@@ -174,11 +174,10 @@ class LifeCycleHook:
         if not self._rendered_atleast_once:
             # since we're not initialized yet we're just appending state
             result = function()
-            self._state += (result,)
+            self._state.append(result)
         else:
             # once finalized we iterate over each succesively used piece of state
-            result = self._state[self._current_state_index]
-        self._current_state_index += 1
+            result = self._state[-1]
         return result
 
     def add_effect(self, effect_func: EffectFunc) -> None:
@@ -220,7 +219,7 @@ class LifeCycleHook:
         """The component completed a render"""
         self.unset_current()
         self._rendered_atleast_once = True
-        self._current_state_index = 0
+        self._state = [self._state[-1]] if self._state else []
         self._render_access.release()
         del self.component
 
