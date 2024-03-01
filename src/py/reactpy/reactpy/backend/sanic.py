@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 from urllib import parse as urllib_parse
 from uuid import uuid4
+import orjson
 
 from sanic import Blueprint, Sanic, request, response
 from sanic.config import Config
@@ -219,13 +220,13 @@ def _make_send_recv_callbacks(
     socket: WebSocketConnection,
 ) -> tuple[SendCoroutine, RecvCoroutine]:
     async def sock_send(value: Any) -> None:
-        await socket.send(json.dumps(value))
+        await socket.send(orjson.dumps(value))
 
     async def sock_recv() -> Any:
         data = await socket.recv()
         if data is None:
             raise Stop()
-        return json.loads(data)
+        return orjson.loads(data)
 
     return sock_send, sock_recv
 
