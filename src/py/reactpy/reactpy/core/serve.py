@@ -155,6 +155,7 @@ class WebsocketServer:
                 else:
                     logger.info("Handshake: Doing state rebuild for reconnection")
                     self._salt = await self._do_state_rebuild_for_reconnection(layout)
+                    logger.info("Handshake: Completed doing state rebuild")
             else:
                 logger.info("Handshake: new connection")
                 layout.start_rendering()

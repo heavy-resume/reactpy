@@ -26,7 +26,7 @@ class StateRecoveryManager:
         otp_key: str | None = None,
         otp_interval: int = (4 * 60 * 60),
         max_objects: int = 256,
-        max_object_length: int = 2048,
+        max_object_length: int = 40000,
         default_serializer: Callable[[Any], bytes] | None = None,
         deserializer_map: dict[type, Callable[[Any], Any]] | None = None,
     ) -> None:
