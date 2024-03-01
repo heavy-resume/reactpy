@@ -55,20 +55,12 @@ class StateRecoveryManager:
             str(id(obj)).encode("utf-8"): obj for obj in serializable_objects
         }
 
-        self._object_to_id[None] = b"0"
-        self._type_id_to_object[b"0"] = None
-
-        self._object_to_id[str] = b"1"
-        self._type_id_to_object[b"1"] = str
-
-        self._object_to_id[int] = b"2"
-        self._type_id_to_object[b"2"] = int
-
-        self._object_to_id[float] = b"3"
-        self._type_id_to_object[b"3"] = float
-
-        self._object_to_id[bool] = b"4"
-        self._type_id_to_object[b"4"] = bool
+        for idx, typ in (
+            None, str, int, float, bool, list, tuple
+        ):
+            idx_as_bytes = str(idx).encode("utf-8")
+            self._object_to_id[typ] = idx_as_bytes
+            self._type_id_to_object[idx_as_bytes] = typ
 
     def _discover_otp_key(self) -> str:
         """
