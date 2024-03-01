@@ -35,7 +35,7 @@ from reactpy.config import (
     REACTPY_DEBUG_MODE,
 )
 from reactpy.core._life_cycle_hook import LifeCycleHook
-from reactpy.core.state_recovery import StateRecoveryManager, StateRecoverySerializer
+from reactpy.core.state_recovery import StateRecoverySerializer
 from reactpy.core.types import (
     ComponentType,
     EventHandlerDict,
@@ -72,7 +72,9 @@ class Layout:
         __slots__ += ("__weakref__",)
 
     def __init__(
-        self, root: ComponentType, state_recovery_serializer: StateRecoverySerializer
+        self,
+        root: ComponentType,
+        state_recovery_serializer: StateRecoverySerializer | None = None,
     ) -> None:
         super().__init__()
         if not isinstance(root, ComponentType):
@@ -186,8 +188,12 @@ class Layout:
             type="layout-update",
             path=new_state.patch_path,
             model=new_state.model.current,
-            state_vars=self._state_recovery_serializer.serialize_state_vars(
-                new_state.life_cycle_state.hook._state
+            state_vars=(
+                self._state_recovery_serializer.serialize_state_vars(
+                    new_state.life_cycle_state.hook._state
+                )
+                if self._state_recovery_serializer
+                else {}
             ),
         )
 

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Awaitable
 from logging import getLogger
+import random
+import string
 from typing import Callable
 from warnings import warn
 
@@ -115,6 +117,7 @@ class WebsocketServer:
         self._send = send
         self._recv = recv
         self._state_recovery_manager = state_recovery_manager
+        self._salt = random.choices(string.ascii_letters + string.digits, k=8)
 
     async def handle_connection(
         self, connection: Connection, constructor: RootComponentConstructor
@@ -123,7 +126,12 @@ class WebsocketServer:
             ConnectionContext(
                 constructor(),
                 value=connection,
-            )
+            ),
+            (
+                self._state_recovery_manager.create_serializer(self._salt)
+                if self._state_recovery_manager
+                else None
+            ),
         )
         async with layout:
             await self._handshake(layout)
