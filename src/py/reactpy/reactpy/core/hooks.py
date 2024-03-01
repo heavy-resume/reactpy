@@ -57,7 +57,9 @@ def use_state(initial_value: Callable[[], _Type]) -> State[_Type]: ...
 def use_state(initial_value: _Type) -> State[_Type]: ...
 
 
-def use_state(initial_value: _Type | Callable[[], _Type], *, server_only: bool = False) -> State[_Type]:
+def use_state(
+    initial_value: _Type | Callable[[], _Type], *, server_only: bool = False
+) -> State[_Type]:
     """See the full :ref:`Use State` docs for details
 
     Parameters:
@@ -495,7 +497,7 @@ def use_ref(initial_value: _Type, server_only: bool = False) -> Ref[_Type]:
         if hook.reconnecting:
             # TODO: if key is missing, maybe raise exception and abort recovery?
             initial_value = hook.client_state.get(key, initial_value)
-    return _use_const(lambda: Ref(initial_value))
+    return _use_const(lambda: Ref(initial_value, key))
 
 
 def _use_const(function: Callable[[], _Type]) -> _Type:
