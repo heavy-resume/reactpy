@@ -112,6 +112,7 @@ class _CurrentState(Generic[_Type]):
             self.value = initial_value
 
         hook = current_hook()
+        hook.schedule_render(self)
 
         def dispatch(new: _Type | Callable[[_Type], _Type]) -> None:
             if callable(new):
