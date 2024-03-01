@@ -26,7 +26,7 @@ class StateRecoveryManager:
         otp_interval=(4 * 60 * 60),
         max_objects=1024,
         max_object_length=512,
-        custom_serializer: Callable[[Any], bytes] | None = None,
+        default_serializer: Callable[[Any], bytes] | None = None,
     ) -> None:
         self._pepper = pepper.encode("utf-8")
         self._max_objects = max_objects
@@ -35,7 +35,7 @@ class StateRecoveryManager:
             (otp_key or self._discover_otp_key()).encode("utf-8")
         )
         self._totp = pyotp.TOTP(self._otp_key, interval=otp_interval)
-        self._custom_serializer = custom_serializer
+        self._default_serializer = default_serializer
 
         self._map_objects_to_ids(
             [
@@ -86,7 +86,7 @@ class StateRecoveryManager:
             salt=salt,
             object_to_type_id=self._object_to_id,
             type_id_to_object=self._type_id_to_object,
-            custom_serializer=self._custom_serializer,
+            default_serializer=self._default_serializer,
         )
 
 
@@ -100,7 +100,7 @@ class StateRecoverySerializer:
         object_to_type_id: dict[Any, bytes],
         type_id_to_object: dict[bytes, Any],
         max_object_length: int,
-        custom_serializer: Callable[[Any], bytes] | None = None,
+        default_serializer: Callable[[Any], bytes] | None = None,
     ) -> None:
         self._otp_code = otp_code.encode("utf-8")
         self._pepper = pepper.encode("utf-8")
@@ -108,7 +108,7 @@ class StateRecoverySerializer:
         self._object_to_type_id = object_to_type_id
         self._type_id_to_object = type_id_to_object
         self._max_object_length = max_object_length
-        self._custom_serializer = custom_serializer
+        self._default_serializer = default_serializer
 
     def serialize_state_vars(self, state_vars: Iterable[Any]) -> tuple[str, str]:
         result = {}
@@ -163,7 +163,7 @@ class StateRecoverySerializer:
         return hasher.hexdigest()
 
     def _serialize_object(self, obj: Any) -> bytes:
-        return orjson.dumps(obj, default=self._custom_serializer)
+        return orjson.dumps(obj, default=self._default_serializer)
 
     def _deserialize_object(self, typ: Any, data: bytes) -> Any:
         if typ is None:
