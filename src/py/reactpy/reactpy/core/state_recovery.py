@@ -121,7 +121,7 @@ class StateRecoverySerializer:
         for var in state_vars:
             state_key = getattr(var, "key", None)
             if state_key is not None:
-                serialized_value, signature = self._serialize(var.value)
+                serialized_value, signature = self._serialize(state_key, var.value)
                 result[state_key] = (serialized_value, signature)
         return result
 

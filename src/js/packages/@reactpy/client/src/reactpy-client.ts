@@ -179,7 +179,7 @@ export class SimpleReactPyClient
     this.salt = "";
 
     this.onMessage(messageTypes.reconnectingCheck, () => { this.indicateReconnect() })
-    this.onMessage(messageTypes.isReady, (salt) => { this.isReady = true; this.salt = salt; });
+    this.onMessage(messageTypes.isReady, (msg) => { this.isReady = true; this.salt = msg.salt; });
     this.onMessage(messageTypes.clientState, () => { this.sendClientState() });
 
     this.reconnect()
