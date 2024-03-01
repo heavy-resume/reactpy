@@ -35,6 +35,7 @@ from reactpy.config import (
     REACTPY_DEBUG_MODE,
 )
 from reactpy.core._life_cycle_hook import LifeCycleHook
+from reactpy.core.state_recovery import StateRecoveryManager, StateRecoverySerializer
 from reactpy.core.types import (
     ComponentType,
     EventHandlerDict,
@@ -63,19 +64,23 @@ class Layout:
         "_root_life_cycle_state_id",
         "_model_states_by_life_cycle_state_id",
         "reconnecting",
-        "client_state"
+        "client_state",
+        "_state_recovery_serializer",
     )
 
     if not hasattr(abc.ABC, "__weakref__"):  # nocov
         __slots__ += ("__weakref__",)
 
-    def __init__(self, root: ComponentType) -> None:
+    def __init__(
+        self, root: ComponentType, state_recovery_serializer: StateRecoverySerializer
+    ) -> None:
         super().__init__()
         if not isinstance(root, ComponentType):
             msg = f"Expected a ComponentType, not {type(root)!r}."
             raise TypeError(msg)
         self.root = root
         self.reconnecting = False
+        self._state_recovery_serializer = state_recovery_serializer
         self.client_state = {}
 
     async def __aenter__(self) -> Layout:
@@ -85,7 +90,9 @@ class Layout:
         self._render_tasks_ready: Semaphore = Semaphore(0)
 
         self._rendering_queue: _ThreadSafeQueue[_LifeCycleStateId] = _ThreadSafeQueue()
-        root_model_state = _new_root_model_state(self.root, self._schedule_render_task, self.reconnecting, self.client_state)
+        root_model_state = _new_root_model_state(
+            self.root, self._schedule_render_task, self.reconnecting, self.client_state
+        )
 
         self._root_life_cycle_state_id = root_id = root_model_state.life_cycle_state.id
         self._model_states_by_life_cycle_state_id = {root_id: root_model_state}
@@ -179,9 +186,9 @@ class Layout:
             type="layout-update",
             path=new_state.patch_path,
             model=new_state.model.current,
-            state_vars={
-                x.key: x.value for x in new_state.life_cycle_state.hook._state if getattr(x, "key", None) and isinstance(x.value, str)
-            }
+            state_vars=self._state_recovery_serializer.serialize_state_vars(
+                new_state.life_cycle_state.hook._state
+            ),
         )
 
     async def _render_component(
@@ -289,7 +296,11 @@ class Layout:
             if event in old_state.targets_by_event:
                 target = old_state.targets_by_event[event]
             else:
-                target = new_state.patch_path + event if handler.target is None else handler.target
+                target = (
+                    new_state.patch_path + event
+                    if handler.target is None
+                    else handler.target
+                )
             new_state.targets_by_event[event] = target
             self._event_handlers[target] = handler
             model_event_handlers[event] = {
@@ -310,7 +321,11 @@ class Layout:
 
         model_event_handlers = new_state.model.current["eventHandlers"] = {}
         for event, handler in handlers_by_event.items():
-            target = new_state.patch_path + event if handler.target is None else handler.target
+            target = (
+                new_state.patch_path + event
+                if handler.target is None
+                else handler.target
+            )
             new_state.targets_by_event[event] = target
             self._event_handlers[target] = handler
             model_event_handlers[event] = {
@@ -397,7 +412,7 @@ class Layout:
                         child,
                         self._schedule_render_task,
                         self.reconnecting,
-                        self.client_state
+                        self.client_state,
                     )
                 elif old_child_state.is_component_state and (
                     old_child_state.life_cycle_state.component.type != child.type
@@ -411,7 +426,7 @@ class Layout:
                         child,
                         self._schedule_render_task,
                         self.reconnecting,
-                        self.client_state
+                        self.client_state,
                     )
                 else:
                     new_child_state = _update_component_model_state(
@@ -421,7 +436,7 @@ class Layout:
                         child,
                         self._schedule_render_task,
                         self.reconnecting,
-                        self.client_state
+                        self.client_state,
                     )
                 await self._render_component(
                     exit_stack, old_child_state, new_child_state, child
@@ -456,7 +471,13 @@ class Layout:
                 new_state.children_by_key[key] = child_state
             elif child_type is _COMPONENT_TYPE:
                 child_state = _make_component_model_state(
-                    new_state, index, key, child, self._schedule_render_task, self.reconnecting, self.client_state
+                    new_state,
+                    index,
+                    key,
+                    child,
+                    self._schedule_render_task,
+                    self.reconnecting,
+                    self.client_state,
                 )
                 await self._render_component(exit_stack, None, child_state, child)
             else:
@@ -497,7 +518,10 @@ class Layout:
 
 
 def _new_root_model_state(
-    component: ComponentType, schedule_render: Callable[[_LifeCycleStateId], None], reconnecting: bool, client_state: dict[str, Any]
+    component: ComponentType,
+    schedule_render: Callable[[_LifeCycleStateId], None],
+    reconnecting: bool,
+    client_state: dict[str, Any],
 ) -> _ModelState:
     return _ModelState(
         parent=None,
@@ -507,7 +531,9 @@ def _new_root_model_state(
         patch_path="",
         children_by_key={},
         targets_by_event={},
-        life_cycle_state=_make_life_cycle_state(component, schedule_render, reconnecting, client_state),
+        life_cycle_state=_make_life_cycle_state(
+            component, schedule_render, reconnecting, client_state
+        ),
     )
 
 
@@ -518,7 +544,7 @@ def _make_component_model_state(
     component: ComponentType,
     schedule_render: Callable[[_LifeCycleStateId], None],
     reconnecting: bool,
-    client_state: dict[str, Any]
+    client_state: dict[str, Any],
 ) -> _ModelState:
     return _ModelState(
         parent=parent,
@@ -528,7 +554,9 @@ def _make_component_model_state(
         patch_path=f"{parent.patch_path}/children/{index}",
         children_by_key={},
         targets_by_event={},
-        life_cycle_state=_make_life_cycle_state(component, schedule_render, reconnecting, client_state),
+        life_cycle_state=_make_life_cycle_state(
+            component, schedule_render, reconnecting, client_state
+        ),
     )
 
 
@@ -558,7 +586,7 @@ def _update_component_model_state(
     new_component: ComponentType,
     schedule_render: Callable[[_LifeCycleStateId], None],
     reconnecting: bool,
-    client_state: dict[str, Any]
+    client_state: dict[str, Any],
 ) -> _ModelState:
     return _ModelState(
         parent=new_parent,
@@ -571,7 +599,9 @@ def _update_component_model_state(
         life_cycle_state=(
             _update_life_cycle_state(old_model_state.life_cycle_state, new_component)
             if old_model_state.is_component_state
-            else _make_life_cycle_state(new_component, schedule_render, reconnecting, client_state)
+            else _make_life_cycle_state(
+                new_component, schedule_render, reconnecting, client_state
+            )
         ),
     )
 
@@ -686,12 +716,16 @@ def _make_life_cycle_state(
     component: ComponentType,
     schedule_render: Callable[[_LifeCycleStateId], None],
     reconnecting: bool,
-    client_state: dict[str, Any]
+    client_state: dict[str, Any],
 ) -> _LifeCycleState:
     life_cycle_state_id = _LifeCycleStateId(uuid4().hex)
     return _LifeCycleState(
         life_cycle_state_id,
-        LifeCycleHook(lambda: schedule_render(life_cycle_state_id), reconnecting=reconnecting, client_state=client_state),
+        LifeCycleHook(
+            lambda: schedule_render(life_cycle_state_id),
+            reconnecting=reconnecting,
+            client_state=client_state,
+        ),
         component,
     )
 

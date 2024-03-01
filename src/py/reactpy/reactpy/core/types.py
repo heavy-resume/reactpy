@@ -230,6 +230,9 @@ class ClientStateMessage(TypedDict):
     type: Literal["client-state"]
     """The type of message"""
     value: dict[str, Any]
+    """The client state"""
+    salt: str
+    """The salt provided to the user"""
 
 
 class IsReadyMessage(TypedDict):
