@@ -8,6 +8,7 @@ from anyio import Semaphore
 
 from reactpy.core._thread_local import ThreadLocal
 from reactpy.core.types import ComponentType, Context, ContextProviderType
+from reactpy.utils import Ref
 
 if TYPE_CHECKING:
     from reactpy.core.hooks import _CurrentState
@@ -147,9 +148,11 @@ class LifeCycleHook:
         self.client_state = client_state or {}
         self._updated_states = {}
 
-    def schedule_render(self, updated_state: _CurrentState) -> None:
+    def add_state_update(self, updated_state: _CurrentState | Ref) -> None:
         if updated_state.key:
             self._updated_states[updated_state.key] = updated_state.value
+
+    def schedule_render(self) -> None:
         if self._scheduled_render:
             return None
         try:

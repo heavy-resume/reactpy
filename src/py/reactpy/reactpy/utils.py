@@ -8,6 +8,7 @@ from typing import Any, Callable, Generic, TypeVar, cast
 from lxml import etree
 from lxml.html import fromstring, tostring
 
+from reactpy.core._life_cycle_hook import current_hook
 from reactpy.core.types import VdomDict
 from reactpy.core.vdom import vdom
 
@@ -36,9 +37,12 @@ class Ref(Generic[_RefValue]):
             self.current = initial_value
             """The present value"""
         self.key = key
+        if key:
+            hook = current_hook()
+            hook.add_state_update(self)
 
     @property
-    def value(self) -> Any:
+    def value(self) -> _RefValue:
         return self.current
 
     def set_current(self, new: _RefValue) -> _RefValue:
@@ -48,6 +52,9 @@ class Ref(Generic[_RefValue]):
         """
         old = self.current
         self.current = new
+        if self.key:
+            hook = current_hook()
+            hook.add_state_update(self)
         return old
 
     def __eq__(self, other: Any) -> bool:

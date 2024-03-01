@@ -112,7 +112,7 @@ class _CurrentState(Generic[_Type]):
             self.value = initial_value
 
         hook = current_hook()
-        hook.schedule_render(self)
+        hook.add_state_update(self)
 
         def dispatch(new: _Type | Callable[[_Type], _Type]) -> None:
             if callable(new):
@@ -121,7 +121,8 @@ class _CurrentState(Generic[_Type]):
                 next_value = new
             if not strictly_equal(next_value, self.value):
                 self.value = next_value
-                hook.schedule_render(self)
+                hook.add_state_update(self)
+                hook.schedule_render()
 
         self.dispatch = dispatch
 
