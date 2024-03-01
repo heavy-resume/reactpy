@@ -37,6 +37,7 @@ class StateRecoveryManager:
         )
         self._totp = pyotp.TOTP(self._otp_key, interval=otp_interval)
         self._default_serializer = default_serializer
+        self._deserializer_map = deserializer_map or {}
 
         self._map_objects_to_ids(
             [
@@ -77,7 +78,7 @@ class StateRecoveryManager:
             otp_code=self._totp.at(target_time or time.time()),
             pepper=self._pepper,
             salt=salt,
-            object_to_type_id=self._object_to_id,
+            object_to_type_id=self._object_to_type_id,
             type_id_to_object=self._type_id_to_object,
             max_object_length=self._max_object_length,
             default_serializer=self._default_serializer,
