@@ -139,7 +139,7 @@ class StateRecoverySerializer:
                 f"Serialized object {obj} is too long (length: {len(result)})"
             )
         signature = self._sign_serialization(key, type_id, result)
-        return (base64.urlsafe_b64encode(result), signature)
+        return (base64.urlsafe_b64encode(result).encode("utf-8"), signature)
 
     def deserialize_client_state(self, state_vars: dict[str, tuple[str, str]]) -> None:
         return {
