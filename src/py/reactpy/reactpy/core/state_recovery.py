@@ -23,9 +23,9 @@ class StateRecoveryManager:
         serializable_objects: Iterable[type],
         pepper: str,
         otp_key: str | None = None,
-        otp_interval=(4 * 60 * 60),
-        max_objects=1024,
-        max_object_length=512,
+        otp_interval: int = (4 * 60 * 60),
+        max_objects: int = 1024,
+        max_object_length: int = 512,
         default_serializer: Callable[[Any], bytes] | None = None,
     ) -> None:
         self._pepper = pepper.encode("utf-8")
@@ -86,6 +86,7 @@ class StateRecoveryManager:
             salt=salt,
             object_to_type_id=self._object_to_id,
             type_id_to_object=self._type_id_to_object,
+            max_object_length=self._max_object_length,
             default_serializer=self._default_serializer,
         )
 
