@@ -226,7 +226,7 @@ def _make_send_recv_callbacks(
         data = await socket.recv()
         if data is None:
             raise Stop()
-        return orjson.loads(data).encode("utf-8")
+        return orjson.loads(data)
 
     return sock_send, sock_recv
 
