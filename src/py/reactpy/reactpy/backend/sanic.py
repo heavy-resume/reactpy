@@ -220,13 +220,13 @@ def _make_send_recv_callbacks(
     socket: WebSocketConnection,
 ) -> tuple[SendCoroutine, RecvCoroutine]:
     async def sock_send(value: Any) -> None:
-        await socket.send(orjson.dumps(value))
+        await socket.send(orjson.dumps(value).decode("utf-8"))
 
     async def sock_recv() -> Any:
         data = await socket.recv()
         if data is None:
             raise Stop()
-        return orjson.loads(data)
+        return orjson.loads(data).encode("utf-8")
 
     return sock_send, sock_recv
 
