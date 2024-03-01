@@ -118,6 +118,8 @@ class StateRecoverySerializer:
         return result
 
     def _serialize(self, key: str, obj: object) -> tuple[str, str, str]:
+        if obj is None:
+            return b"0", b"", b""
         obj_type = type(obj)
         for t in obj_type.__mro__:
             type_id = self._object_to_type_id.get(t)
@@ -148,6 +150,8 @@ class StateRecoverySerializer:
     def _deserialize(
         self, key: str, type_id: bytes, data: bytes, signature: str
     ) -> Any:
+        if type_id == b"0":
+            return None
         try:
             typ = self._type_id_to_object[type_id]
         except KeyError as err:
