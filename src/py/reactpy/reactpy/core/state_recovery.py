@@ -27,6 +27,7 @@ class StateRecoveryManager:
         max_objects: int = 1024,
         max_object_length: int = 512,
         default_serializer: Callable[[Any], bytes] | None = None,
+        deserializer_map: dict[type, Callable[[Any], Any]] | None = None,
     ) -> None:
         self._pepper = pepper
         self._max_objects = max_objects
@@ -48,11 +49,13 @@ class StateRecoveryManager:
         )
 
     def _map_objects_to_ids(self, serializable_objects: Iterable[type]) -> dict:
+        self._object_to_type_id = {}
+        self._type_id_to_object = {}
         for idx, typ in enumerate(
             (None, str, int, float, bool, list, tuple, *serializable_objects)
         ):
             idx_as_bytes = str(idx).encode("utf-8")
-            self._object_to_id[typ] = idx_as_bytes
+            self._object_to_type_id[typ] = idx_as_bytes
             self._type_id_to_object[idx_as_bytes] = typ
 
     def _discover_otp_key(self) -> str:
@@ -78,6 +81,7 @@ class StateRecoveryManager:
             type_id_to_object=self._type_id_to_object,
             max_object_length=self._max_object_length,
             default_serializer=self._default_serializer,
+            deserializer_map=self._deserializer_map,
         )
 
 
@@ -92,6 +96,7 @@ class StateRecoverySerializer:
         type_id_to_object: dict[bytes, Any],
         max_object_length: int,
         default_serializer: Callable[[Any], bytes] | None = None,
+        deserializer_map: dict[type, Callable[[Any], Any]] | None = None,
     ) -> None:
         self._otp_code = otp_code.encode("utf-8")
         self._pepper = pepper.encode("utf-8")
@@ -100,6 +105,7 @@ class StateRecoverySerializer:
         self._type_id_to_object = type_id_to_object
         self._max_object_length = max_object_length
         self._default_serializer = default_serializer
+        self._deserializer_map = deserializer_map or {}
 
     def serialize_state_vars(self, state_vars: Iterable[Any]) -> tuple[str, str]:
         result = {}
@@ -168,6 +174,9 @@ class StateRecoverySerializer:
         if typ is None:
             return None
         result = orjson.loads(data)
+        custom_deserializer = self._deserializer_map.get(typ)
+        if custom_deserializer:
+            return custom_deserializer(result)
         if isinstance(result, str):
             return typ(result)
         if isinstance(result, dict):
