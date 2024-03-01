@@ -126,12 +126,13 @@ class StateRecoverySerializer:
         return result
 
     def _serialize(self, key: str, obj: object) -> tuple[str, str]:
-        try:
-            type_id = self._object_to_type_id[obj]
-        except KeyError as err:
-            raise ValueError(
-                f"Object {obj} was not white-listed for serialization"
-            ) from err
+        obj_type = type(obj)
+        for t in obj_type.__mro__:
+            type_id = self._object_to_type_id.get(t)
+            if type_id:
+                break
+        else:
+            raise ValueError(f"Object {obj} was not white-listed for serialization")
         result = self._serialize_object(obj)
         if len(result) > self._max_object_length:
             raise ValueError(
