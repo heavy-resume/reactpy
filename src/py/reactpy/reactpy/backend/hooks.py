@@ -6,10 +6,10 @@ from typing import Any, Callable
 from reactpy.backend.types import Connection, Location
 from reactpy.core.hooks import (
     ReconnectingOnly,
+    _EffectApplyFunc,
     create_context,
     use_context,
     use_effect,
-    _EffectApplyFunc,
 )
 from reactpy.core.types import Context
 

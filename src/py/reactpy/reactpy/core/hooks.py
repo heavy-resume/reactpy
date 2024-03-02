@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from collections.abc import Coroutine, Sequence
 from hashlib import md5
-import inspect
 from logging import getLogger
-import sys
 from types import FunctionType
 from typing import (
     TYPE_CHECKING,
