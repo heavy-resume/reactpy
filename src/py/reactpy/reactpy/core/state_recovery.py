@@ -29,6 +29,7 @@ class StateRecoveryManager:
         otp_key: str | None = None,
         otp_interval: int = (4 * 60 * 60),
         otp_digits: int = 32,
+        otp_max_age: int = (48 * 60 * 60),
         max_num_state_objects: int = 256,
         max_object_length: int = 40000,
         default_serializer: Callable[[Any], bytes] | None = None,
@@ -41,6 +42,7 @@ class StateRecoveryManager:
             (otp_key or self._discover_otp_key()).encode("utf-8")
         )
         self._totp = pyotp.TOTP(self._otp_key, digits=otp_digits, interval=otp_interval)
+        self._otp_max_age = otp_max_age
         self._default_serializer = default_serializer
         self._deserializer_map = deserializer_map or {}
 
@@ -80,7 +82,9 @@ class StateRecoveryManager:
         self, salt: str, target_time: float | None = None
     ) -> "StateRecoverySerializer":
         return StateRecoverySerializer(
-            otp_code=self._totp.at(target_time or time.time()),
+            totp=self._totp,
+            target_time=target_time,
+            otp_max_age=otp_max_age,
             pepper=self._pepper,
             salt=salt,
             object_to_type_id=self._object_to_type_id,
@@ -96,7 +100,9 @@ class StateRecoverySerializer:
 
     def __init__(
         self,
-        otp_code: str,
+        totp: pyotp.TOTP,
+        target_time: float | None,
+        otp_max_age: int,
         pepper: str,
         salt: str,
         object_to_type_id: dict[Any, bytes],
@@ -106,7 +112,12 @@ class StateRecoverySerializer:
         default_serializer: Callable[[Any], bytes] | None = None,
         deserializer_map: dict[type, Callable[[Any], Any]] | None = None,
     ) -> None:
+        target_time = target_time or time.time()
+        otp_code = totp.at(target_time)
+        self._target_time = target_time
+        self._otp_max_age = otp_max_age
         self._otp_code = otp_code.encode("utf-8")
+        self._totp = totp
         self._pepper = pepper.encode("utf-8")
         self._salt = salt.encode("utf-8")
         self._object_to_type_id = object_to_type_id
@@ -177,15 +188,41 @@ class StateRecoverySerializer:
         result = base64.urlsafe_b64decode(data)
         expected_signature = self._sign_serialization(key, type_id, result)
         if expected_signature != signature:
-            raise StateRecoveryFailureError(f"Signature mismatch for type id {type_id}")
+            if not self._try_future_code(key, type_id, result, signature):
+                if not self._try_older_codes_and_see_if_one_checks_out(
+                    key, type_id, result, signature
+                ):
+                    raise StateRecoveryFailureError(
+                        f"Signature mismatch for type id {type_id}"
+                    )
         return self._deserialize_object(typ, result)
 
-    def _sign_serialization(self, key: str, type_id: bytes, data: bytes) -> str:
+    def _try_future_code(
+        self, key: str, type_id: bytes, data: bytes, signature: str
+    ) -> bool:
+        future_time = self._target_time + self._totp.interval
+        otp_code = self._totp.at(future_time).encode("utf-8")
+        return self._sign_serialization(key, type_id, data, otp_code) == signature
+
+    def _try_older_codes_and_see_if_one_checks_out(
+        self, key: str, type_id: bytes, data: bytes, signature: str
+    ) -> bool:
+        while True:
+            past_time = self._target_time - self._totp.interval
+            otp_code = self._totp.at(past_time).encode("utf-8")
+            if self._sign_serialization(key, type_id, data, otp_code) == signature:
+                return True
+            if past_time < self._target_time - self._otp_max_age:
+                return False
+
+    def _sign_serialization(
+        self, key: str, type_id: bytes, data: bytes, otp_code: bytes | None = None
+    ) -> str:
         hasher = hashlib.sha256()
         hasher.update(type_id)
         hasher.update(data)
         hasher.update(self._pepper)
-        hasher.update(self._otp_code)
+        hasher.update(otp_code or self._otp_code)
         hasher.update(self._salt)
         hasher.update(key.encode("utf-8"))
         return hasher.hexdigest()
