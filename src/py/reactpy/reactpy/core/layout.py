@@ -176,7 +176,7 @@ class Layout:
                 try:
                     model_state_id = await self._rendering_queue.get_nowait()
                 except asyncio.QueueEmpty:
-                    asyncio.sleep(0.15)  # make sure
+                    await asyncio.sleep(0.15)  # make sure
                 else:
                     break
             else:
