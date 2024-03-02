@@ -24,7 +24,7 @@ class StateRecoveryFailureError(Exception):
 class StateRecoveryManager:
     def __init__(
         self,
-        serializable_objects: Iterable[type],
+        serializable_types: Iterable[type],
         pepper: str,
         otp_key: str | None = None,
         otp_interval: int = (4 * 60 * 60),
@@ -45,7 +45,7 @@ class StateRecoveryManager:
 
         self._map_objects_to_ids(
             [
-                *list(serializable_objects),
+                *list(serializable_types),
                 Decimal,
                 datetime.datetime,
                 datetime.date,
@@ -53,11 +53,11 @@ class StateRecoveryManager:
             ]
         )
 
-    def _map_objects_to_ids(self, serializable_objects: Iterable[type]) -> dict:
+    def _map_objects_to_ids(self, serializable_types: Iterable[type]) -> dict:
         self._object_to_type_id = {}
         self._type_id_to_object = {}
         for idx, typ in enumerate(
-            (None, str, int, float, bool, list, tuple, UUID, *serializable_objects)
+            (None, str, int, float, bool, list, tuple, UUID, *serializable_types)
         ):
             idx_as_bytes = str(idx).encode("utf-8")
             self._object_to_type_id[typ] = idx_as_bytes
@@ -140,7 +140,9 @@ class StateRecoverySerializer:
             if type_id:
                 break
         else:
-            raise ValueError(f"Object {obj} was not white-listed for serialization")
+            raise ValueError(
+                f"Objects of type {obj_type} was not part of serializable_types"
+            )
         result = self._serialize_object(obj)
         if len(result) > self._max_object_length:
             raise ValueError(
