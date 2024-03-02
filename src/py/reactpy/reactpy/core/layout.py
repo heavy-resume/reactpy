@@ -168,11 +168,15 @@ class Layout:
                 )
             else:
                 await self._create_layout_update(model_state)
+            # this might seem counterintuitive. What's happening is that events can get kicked off
+            # and currently there's no (obvious) visibility on if we're waiting for them to finish
+            # so this will wait up to 0.15 * 5 = 750 ms to see if any renders come in before
+            # declaring it done. In the future, it would be better to just track the pending events
             for _ in range(5):
                 try:
                     model_state_id = await self._rendering_queue.get_nowait()
                 except asyncio.QueueEmpty:
-                    asyncio.sleep(0.01)  # make sure
+                    asyncio.sleep(0.15)  # make sure
                 else:
                     break
             else:
