@@ -28,6 +28,7 @@ class StateRecoveryManager:
         pepper: str,
         otp_key: str | None = None,
         otp_interval: int = (4 * 60 * 60),
+        otp_digits: int = 32,
         max_num_state_objects: int = 256,
         max_object_length: int = 40000,
         default_serializer: Callable[[Any], bytes] | None = None,
@@ -39,7 +40,7 @@ class StateRecoveryManager:
         self._otp_key = base64.b32encode(
             (otp_key or self._discover_otp_key()).encode("utf-8")
         )
-        self._totp = pyotp.TOTP(self._otp_key, interval=otp_interval)
+        self._totp = pyotp.TOTP(self._otp_key, digits=otp_digits, interval=otp_interval)
         self._default_serializer = default_serializer
         self._deserializer_map = deserializer_map or {}
 
