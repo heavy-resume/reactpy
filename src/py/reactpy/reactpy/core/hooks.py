@@ -519,7 +519,7 @@ def use_ref(initial_value: _Type, server_only: bool = True) -> Ref[_Type]:
 
 
 def _use_const(function: Callable[[], _Type]) -> _Type:
-    return current_hook().use_state(function, server_only=True)
+    return current_hook().use_state(function)
 
 
 def _try_to_infer_closure_values(
