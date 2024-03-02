@@ -14,6 +14,7 @@ import pyotp
 
 logger = getLogger(__name__)
 
+
 class StateRecoveryFailureError(Exception):
     """
     Raised when state recovery fails.
@@ -118,7 +119,9 @@ class StateRecoverySerializer:
         self, state_vars: dict[str, Any]
     ) -> dict[str, tuple[str, str, str]]:
         if len(state_vars) > self._max_num_state_objects:
-            logger.warning(f"State is too large ({len(state_vars)}). State will not be sent")
+            logger.warning(
+                f"State is too large ({len(state_vars)}). State will not be sent"
+            )
             return {}
         result = {}
         for key, value in state_vars.items():
@@ -129,6 +132,9 @@ class StateRecoverySerializer:
         if obj is None:
             return "0", "", ""
         obj_type = type(obj)
+        if obj_type in (list, tuple):
+            if len(obj) != 0:
+                obj_type = type(obj[0])
         for t in obj_type.__mro__:
             type_id = self._object_to_type_id.get(t)
             if type_id:
@@ -184,11 +190,9 @@ class StateRecoverySerializer:
     def _serialize_object(self, obj: Any) -> bytes:
         return orjson.dumps(obj, default=self._default_serializer)
 
-    def _deserialize_object(self, typ: Any, data: bytes) -> Any:
-        if typ is None:
-            return None
-        result = orjson.loads(data)
-        custom_deserializer = self._deserializer_map.get(typ)
+    def _do_deserialize(
+        self, typ: type, result: Any, custom_deserializer: Callable | None
+    ) -> Any:
         if custom_deserializer:
             return custom_deserializer(result)
         if isinstance(result, str):
@@ -196,3 +200,14 @@ class StateRecoverySerializer:
         if isinstance(result, dict):
             return typ(**result)
         return result
+
+    def _deserialize_object(self, typ: Any, data: bytes) -> Any:
+        if typ is None and not data:
+            return None
+        result = orjson.loads(data)
+        custom_deserializer = self._deserializer_map.get(typ)
+        if type(result) in (list, tuple):
+            return [
+                self._do_deserialize(typ, item, custom_deserializer) for item in result
+            ]
+        return self._do_deserialize(typ, result, custom_deserializer)
