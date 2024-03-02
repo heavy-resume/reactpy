@@ -43,8 +43,10 @@ __all__ = [
 logger = getLogger(__name__)
 
 
-# Faux object used for dependency of reconnecting
-ReconnectingOnly = ["reconnecting-faux-class"]
+class ReconnectingOnly(list):
+    """
+    Used to indicate that a hook should only be used during reconnection
+    """
 
 
 _Type = TypeVar("_Type")
@@ -175,11 +177,11 @@ def use_effect(
     last_clean_callback: Ref[_EffectCleanFunc | None] = use_ref(None)
     hook = current_hook()
     if hook.reconnecting.current:
-        if dependencies is not ReconnectingOnly:
+        if not isinstance(dependencies, ReconnectingOnly):
             return
         dependencies = None
     else:
-        if dependencies is ReconnectingOnly:
+        if isinstance(dependencies, ReconnectingOnly):
             return
         dependencies = _try_to_infer_closure_values(function, dependencies)
 
