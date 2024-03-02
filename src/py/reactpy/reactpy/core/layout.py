@@ -157,11 +157,8 @@ class Layout:
             return await self._serial_render()
 
     async def render_until_queue_empty(self) -> None:
+        model_state_id = await self._rendering_queue.get()
         while True:
-            try:
-                model_state_id = await self._rendering_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                return
             try:
                 model_state = self._model_states_by_life_cycle_state_id[model_state_id]
             except KeyError:
@@ -171,6 +168,15 @@ class Layout:
                 )
             else:
                 await self._create_layout_update(model_state)
+            for _ in range(5):
+                try:
+                    model_state_id = await self._rendering_queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    asyncio.sleep(0.01)  # make sure
+                else:
+                    break
+            else:
+                return
 
     async def _serial_render(self) -> LayoutUpdateMessage:  # nocov
         """Await the next available render. This will block until a component is updated"""
