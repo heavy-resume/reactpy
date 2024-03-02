@@ -192,7 +192,7 @@ class WebsocketServer:
         else:
             salt = client_state_msg["salt"]
         layout.start_rendering()
-        await layout.render()
+        await layout.render_until_queue_empty()
         layout.reconnecting.set_current(False)
         layout.client_state = {}
         return salt
