@@ -190,7 +190,7 @@ class Layout:
         if REACTPY_CHECK_VDOM_SPEC.current:
             validate_vdom_json(new_state.model.current)
 
-        with self._state_var_lock:
+        async with self._state_var_lock:
             tmp_state_vars = copy.copy(new_state.life_cycle_state.hook._updated_states)
             new_state.life_cycle_state.hook._updated_states.clear()
         state_vars = (
