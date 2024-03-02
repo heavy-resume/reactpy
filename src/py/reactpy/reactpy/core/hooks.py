@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+from functools import lru_cache
+import hashlib
 import sys
 from collections.abc import Coroutine, Sequence
 from hashlib import md5
@@ -78,7 +80,7 @@ def use_state(
     else:
         hook = current_hook()
         caller_info = get_caller_info()
-        key = md5(caller_info.encode(), usedforsecurity=False).hexdigest()
+        key = get_state_key(caller_info)
         if hook.reconnecting.current:
             try:
                 initial_value = hook.client_state[key]
@@ -90,6 +92,10 @@ def use_state(
     return State(current_state.value, current_state.dispatch)
 
 
+
+def sha256_hexdigest(s: str) -> str:
+
+
 def get_caller_info():
     # Get the current stack frame and then the frame above it
     caller_frame = sys._getframe(2)
@@ -98,8 +104,21 @@ def get_caller_info():
         patch_path = render_frame.f_locals.get("patch_path_for_state")
         if patch_path is not None:
             break
-    # Extract the relevant information: file path and line number
-    return f"{caller_frame.f_code.co_filename} {caller_frame.f_lineno} {patch_path}"
+    # Extract the relevant information: file path and line number and hash it
+    return sha256_hexdigest(
+        f"{caller_frame.f_code.co_filename} {caller_frame.f_lineno} {patch_path}"
+    )
+
+
+__DEBUG_CALLER_INFO_TO_STATE_KEY = {}
+
+
+@lru_cache(8192)
+def get_state_key(caller_info: str) -> str:
+    result = hashlib.sha256(caller_info.encode("utf8")).hexdigest()[:20]
+    if __debug__:
+        __DEBUG_CALLER_INFO_TO_STATE_KEY[result] = caller_info
+    return result
 
 
 class _CurrentState(Generic[_Type]):
@@ -508,7 +527,7 @@ def use_ref(initial_value: _Type, server_only: bool = True) -> Ref[_Type]:
     else:
         hook = current_hook()
         caller_info = get_caller_info()
-        key = md5(caller_info.encode(), usedforsecurity=False).hexdigest()
+        key = get_state_key(caller_info)
         if hook.reconnecting.current:
             try:
                 initial_value = hook.client_state[key]
