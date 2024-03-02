@@ -92,8 +92,11 @@ def use_state(
 def get_caller_info():
     # Get the current stack frame and then the frame above it
     caller_frame = sys._getframe(2)
-    render_frame = sys._getframe(4)
-    patch_path = render_frame.f_locals["patch_path_for_state"]
+    for i in range(50):
+        render_frame = sys._getframe(4 + i)
+        patch_path = render_frame.f_locals.get("patch_path_for_state")
+        if patch_path is not None:
+            break
     # Extract the relevant information: file path and line number
     return f"{caller_frame.f_code.co_filename} {caller_frame.f_lineno} {patch_path}"
 
