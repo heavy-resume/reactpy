@@ -4,6 +4,7 @@ import hashlib
 import time
 from collections.abc import Iterable
 from decimal import Decimal
+from logging import getLogger
 from pathlib import Path
 from typing import Any, Callable
 from uuid import UUID
@@ -11,6 +12,7 @@ from uuid import UUID
 import orjson
 import pyotp
 
+logger = getLogger(__name__)
 
 class StateRecoveryFailureError(Exception):
     """
@@ -25,13 +27,13 @@ class StateRecoveryManager:
         pepper: str,
         otp_key: str | None = None,
         otp_interval: int = (4 * 60 * 60),
-        max_objects: int = 256,
+        max_num_state_objects: int = 256,
         max_object_length: int = 40000,
         default_serializer: Callable[[Any], bytes] | None = None,
         deserializer_map: dict[type, Callable[[Any], Any]] | None = None,
     ) -> None:
         self._pepper = pepper
-        self._max_objects = max_objects
+        self._max_num_state_objects = max_num_state_objects
         self._max_object_length = max_object_length
         self._otp_key = base64.b32encode(
             (otp_key or self._discover_otp_key()).encode("utf-8")
@@ -82,6 +84,7 @@ class StateRecoveryManager:
             object_to_type_id=self._object_to_type_id,
             type_id_to_object=self._type_id_to_object,
             max_object_length=self._max_object_length,
+            max_num_state_objects=self._max_num_state_objects,
             default_serializer=self._default_serializer,
             deserializer_map=self._deserializer_map,
         )
@@ -97,6 +100,7 @@ class StateRecoverySerializer:
         object_to_type_id: dict[Any, bytes],
         type_id_to_object: dict[bytes, Any],
         max_object_length: int,
+        max_num_state_objects: int,
         default_serializer: Callable[[Any], bytes] | None = None,
         deserializer_map: dict[type, Callable[[Any], Any]] | None = None,
     ) -> None:
@@ -112,6 +116,9 @@ class StateRecoverySerializer:
     def serialize_state_vars(
         self, state_vars: dict[str, Any]
     ) -> dict[str, tuple[str, str, str]]:
+        if len(state_vars) > max_num_state_objects:
+            logger.warning(f"State is too large ({len(state_vars)}). State will not be sent")
+            return {}
         result = {}
         for key, value in state_vars.items():
             result[key] = self._serialize(key, value)
