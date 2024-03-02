@@ -68,6 +68,7 @@ class Layout:
         "reconnecting",
         "client_state",
         "_state_recovery_serializer",
+        "_state_var_lock",
     )
 
     if not hasattr(abc.ABC, "__weakref__"):  # nocov
