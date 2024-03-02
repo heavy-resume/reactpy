@@ -5,6 +5,7 @@ from reactpy.core import hooks
 from reactpy.core.component import component
 from reactpy.core.events import event
 from reactpy.core.hooks import (
+    ReconnectingOnly,
     create_context,
     use_callback,
     use_context,
@@ -33,6 +34,7 @@ __all__ = [
     "html",
     "Layout",
     "logging",
+    "ReconnectingOnly",
     "Ref",
     "run",
     "sample",
