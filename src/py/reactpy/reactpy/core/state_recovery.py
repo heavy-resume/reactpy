@@ -110,13 +110,14 @@ class StateRecoverySerializer:
         self._object_to_type_id = object_to_type_id
         self._type_id_to_object = type_id_to_object
         self._max_object_length = max_object_length
+        self._max_num_state_objects = max_num_state_objects
         self._default_serializer = default_serializer
         self._deserializer_map = deserializer_map or {}
 
     def serialize_state_vars(
         self, state_vars: dict[str, Any]
     ) -> dict[str, tuple[str, str, str]]:
-        if len(state_vars) > max_num_state_objects:
+        if len(state_vars) > self._max_num_state_objects:
             logger.warning(f"State is too large ({len(state_vars)}). State will not be sent")
             return {}
         result = {}
