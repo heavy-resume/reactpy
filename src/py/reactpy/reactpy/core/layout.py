@@ -10,9 +10,11 @@ from asyncio import (
     get_running_loop,
     wait,
 )
+import asyncio
 from collections import Counter
 from collections.abc import Sequence
 from contextlib import AsyncExitStack
+import copy
 from logging import getLogger
 from typing import (
     Any,
@@ -83,6 +85,7 @@ class Layout:
         self.reconnecting = Ref(False)
         self._state_recovery_serializer = None
         self.client_state = {}
+        self._state_var_lock = asyncio.Lock()
 
     def set_recovery_serializer(self, serializer: StateRecoverySerializer) -> None:
         self._state_recovery_serializer = serializer
@@ -186,17 +189,19 @@ class Layout:
         if REACTPY_CHECK_VDOM_SPEC.current:
             validate_vdom_json(new_state.model.current)
 
+        with self._state_var_lock:
+            tmp_state_vars = copy.copy(new_state.life_cycle_state.hook._updated_states)
+            new_state.life_cycle_state.hook._updated_states.clear()
+        state_vars = (
+            self._state_recovery_serializer.serialize_state_vars(tmp_state_vars)
+            if self._state_recovery_serializer
+            else {}
+        )
         return LayoutUpdateMessage(
             type="layout-update",
             path=new_state.patch_path,
             model=new_state.model.current,
-            state_vars=(
-                self._state_recovery_serializer.serialize_state_vars(
-                    new_state.life_cycle_state.hook._updated_states
-                )
-                if self._state_recovery_serializer
-                else {}
-            ),
+            state_vars=state_vars,
         )
 
     async def _render_component(
