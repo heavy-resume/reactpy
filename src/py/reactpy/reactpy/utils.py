@@ -27,7 +27,7 @@ class Ref(Generic[_RefValue]):
         You can compare the contents for two ``Ref`` objects using the ``==`` operator.
     """
 
-    __slots__ = ("current", "key")
+    __slots__ = ("current", "key", "_hook")
 
     def __init__(
         self, initial_value: _RefValue = _UNDEFINED, key: str | None = None
@@ -38,9 +38,11 @@ class Ref(Generic[_RefValue]):
             self.current = initial_value
             """The present value"""
         self.key = key
+        self._hook = None
         if key:
             hook = current_hook()
             hook.add_state_update(self)
+            self._hook = hook
 
     @property
     def value(self) -> _RefValue:
@@ -51,13 +53,10 @@ class Ref(Generic[_RefValue]):
 
         This is nice to use in ``lambda`` functions.
         """
-        from reactpy.core._life_cycle_hook import current_hook
-
         old = self.current
         self.current = new
         if self.key:
-            hook = current_hook()
-            hook.add_state_update(self)
+            self._hook.add_state_update(self)
         return old
 
     def __eq__(self, other: Any) -> bool:
