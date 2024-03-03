@@ -101,9 +101,7 @@ def get_caller_info():
         if patch_path is not None:
             break
     # Extract the relevant information: file path and line number and hash it
-    return sha256_hexdigest(
-        f"{caller_frame.f_code.co_filename} {caller_frame.f_lineno} {patch_path}"
-    )
+    return f"{caller_frame.f_code.co_filename} {caller_frame.f_lineno} {patch_path}"
 
 
 __DEBUG_CALLER_INFO_TO_STATE_KEY = {}
