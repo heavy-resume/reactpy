@@ -136,6 +136,9 @@ class Layout:
     def start_rendering(self) -> None:
         self._schedule_render_task(self._root_life_cycle_state_id)
 
+    def start_rendering_for_reconnect(self) -> None:
+        self._rendering_queue.put(self._root_life_cycle_state_id)
+
     async def deliver(self, event: LayoutEventMessage) -> None:
         """Dispatch an event to the targeted handler"""
         # It is possible for an element in the frontend to produce an event
