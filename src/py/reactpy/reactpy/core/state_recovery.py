@@ -217,13 +217,15 @@ class StateRecoverySerializer:
     def _try_older_codes_and_see_if_one_checks_out(
         self, key: str, type_id: bytes, data: bytes, signature: str
     ) -> bool:
-        while True:
-            past_time = self._target_time - self._totp.interval
+        past_time = self._target_time
+        for _ in range(100):
+            past_time -= self._totp.interval
             otp_code = self._get_otp_code(past_time).encode("utf-8")
             if self._sign_serialization(key, type_id, data, otp_code) == signature:
                 return True
             if past_time < self._target_time - self._otp_max_age:
                 return False
+        raise RuntimeError("Too many iterations: _try_older_codes_and_see_if_one_checks_out")
 
     def _sign_serialization(
         self, key: str, type_id: bytes, data: bytes, otp_code: bytes | None = None
