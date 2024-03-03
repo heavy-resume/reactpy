@@ -69,7 +69,7 @@ async def serve_layout(
     try:
         async with create_task_group() as task_group:
             task_group.start_soon(_single_outgoing_loop, layout, send)
-            task_group.start_soon(_single_incoming_loop, task_group, layout, recv)
+            task_group.start_soon(_single_incoming_loop, task_group, layout, recv, send)
     except Stop:  # nocov
         warn(
             "The Stop exception is deprecated and will be removed in a future version",
