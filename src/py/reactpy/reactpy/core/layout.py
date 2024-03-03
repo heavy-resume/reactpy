@@ -44,6 +44,7 @@ from reactpy.core._life_cycle_hook import (
     clear_state_updates,
     create_hook_state,
     create_state_updates,
+    get_hook_state,
     get_state_updates,
 )
 from reactpy.core.state_recovery import StateRecoverySerializer
