@@ -84,7 +84,7 @@ class StateRecoveryManager:
         return StateRecoverySerializer(
             totp=self._totp,
             target_time=target_time,
-            otp_max_age=otp_max_age,
+            otp_max_age=self._otp_max_age,
             pepper=self._pepper,
             salt=salt,
             object_to_type_id=self._object_to_type_id,
