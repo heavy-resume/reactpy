@@ -73,7 +73,7 @@ class LayoutType(Protocol[_Render_co, _Event_contra]):
     async def render(self) -> _Render_co:
         """Render an update to a view"""
 
-    async def deliver(self, event: _Event_contra) -> None:
+    async def deliver(self, event: _Event_contra, send: Callable) -> None:
         """Relay an event to its respective handler"""
 
     async def __aenter__(self) -> LayoutType[_Render_co, _Event_contra]:
@@ -213,6 +213,14 @@ class LayoutUpdateMessage(TypedDict):
     """JSON Pointer path to the model element being updated"""
     model: VdomJson
     """The model to assign at the given JSON Pointer path"""
+    state_vars: dict[str, Any]
+
+
+class StateUpdateMessage(TypedDict):
+    """A message describing an update to state variables"""
+
+    type: Literal["state-update"]
+    """The type of message"""
     state_vars: dict[str, Any]
 
 

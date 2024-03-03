@@ -18,7 +18,9 @@ from contextlib import AsyncExitStack
 from logging import getLogger
 from typing import (
     Any,
+    Awaitable,
     Callable,
+    Coroutine,
     Generic,
     NamedTuple,
     NewType,
@@ -51,6 +53,7 @@ from reactpy.core.types import (
     Key,
     LayoutEventMessage,
     LayoutUpdateMessage,
+    StateUpdateMessage,
     VdomChild,
     VdomDict,
     VdomJson,
@@ -139,7 +142,7 @@ class Layout:
     def start_rendering_for_reconnect(self) -> None:
         self._rendering_queue.put(self._root_life_cycle_state_id)
 
-    async def deliver(self, event: LayoutEventMessage) -> None:
+    async def deliver(self, event: LayoutEventMessage, send: Coroutine) -> None:
         """Dispatch an event to the targeted handler"""
         # It is possible for an element in the frontend to produce an event
         # associated with a backend model that has been deleted. We only handle
@@ -150,10 +153,19 @@ class Layout:
         if handler is not None:
             state_update_token = create_state_updates()
             try:
-                await handler.function(event["data"])
-            except Exception:
-                logger.exception(f"Failed to execute event handler {handler}")
-            clear_state_updates(state_update_token)
+                try:
+                    await handler.function(event["data"])
+                except Exception:
+                    logger.exception(f"Failed to execute event handler {handler}")
+                state_updates = get_state_updates()
+                if state_updates:
+                    await send(
+                        StateUpdateMessage(
+                            type="state-update", state_vars=state_updates
+                        )
+                    )
+            finally:
+                clear_state_updates(state_update_token)
         else:
             logger.info(
                 f"Ignored event - handler {event['target']!r} "
