@@ -13,6 +13,7 @@ from anyio.abc import TaskGroup
 from reactpy.backend.hooks import ConnectionContext
 from reactpy.backend.types import Connection
 from reactpy.config import REACTPY_DEBUG_MODE
+from reactpy.core._life_cycle_hook import clear_hook_state, create_hook_state
 from reactpy.core.layout import Layout
 from reactpy.core.state_recovery import StateRecoveryFailureError, StateRecoveryManager
 from reactpy.core.types import (
@@ -82,18 +83,22 @@ async def _single_outgoing_loop(
     layout: LayoutType[LayoutUpdateMessage, LayoutEventMessage], send: SendCoroutine
 ) -> None:
     while True:
-        update = await layout.render()
+        token = create_hook_state()
         try:
-            await send(update)
-        except Exception:  # nocov
-            if not REACTPY_DEBUG_MODE.current:
-                msg = (
-                    "Failed to send update. More info may be available "
-                    "if you enabling debug mode by setting "
-                    "`reactpy.config.REACTPY_DEBUG_MODE.current = True`."
-                )
-                logger.error(msg)
-            raise
+            update = await layout.render()
+            try:
+                await send(update)
+            except Exception:  # nocov
+                if not REACTPY_DEBUG_MODE.current:
+                    msg = (
+                        "Failed to send update. More info may be available "
+                        "if you enabling debug mode by setting "
+                        "`reactpy.config.REACTPY_DEBUG_MODE.current = True`."
+                    )
+                    logger.error(msg)
+                raise
+        finally:
+            clear_hook_state(token)
 
 
 async def _single_incoming_loop(

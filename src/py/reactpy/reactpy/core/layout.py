@@ -40,7 +40,7 @@ from reactpy.core._life_cycle_hook import (
     LifeCycleHook,
     clear_hook_state,
     create_hook_state,
-    get_current_hook,
+    get_hook_state,
 )
 from reactpy.core.state_recovery import StateRecoverySerializer
 from reactpy.core.types import (
@@ -176,7 +176,7 @@ class Layout:
                     f"{model_state_id!r} - component already unmounted"
                 )
             else:
-                await self._create_layout_update(model_state)
+                await self._create_layout_update(model_state, get_hook_state())
             # this might seem counterintuitive. What's happening is that events can get kicked off
             # and currently there's no (obvious) visibility on if we're waiting for them to finish
             # so this will wait up to 0.15 * 5 = 750 ms to see if any renders come in before
@@ -203,7 +203,7 @@ class Layout:
                     f"{model_state_id!r} - component already unmounted"
                 )
             else:
-                return await self._create_layout_update(model_state, get_current_hook())
+                return await self._create_layout_update(model_state, get_hook_state())
 
     async def _concurrent_render(self) -> LayoutUpdateMessage:
         """Await the next available render. This will block until a component is updated"""
