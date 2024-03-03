@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import logging
 from asyncio import Event, Task, create_task, gather
+from contextvars import ContextVar, Token
 from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar
 
 from anyio import Semaphore
 
-from reactpy.core._thread_local import ThreadLocal
 from reactpy.core.types import ComponentType, Context, ContextProviderType
 from reactpy.utils import Ref
 
@@ -22,12 +22,23 @@ class EffectFunc(Protocol):
 
 logger = logging.getLogger(__name__)
 
-_HOOK_STATE: ThreadLocal[list[LifeCycleHook]] = ThreadLocal(list)
+_hook_state = ContextVar("reactpy_hook_state")
+
+
+def create_hook_state() -> Token[list]:
+    return _hook_state.set([])
+
+
+def clear_hook_state(token: Token[list]) -> None:
+    hook_stack = _hook_state.get()
+    if hook_stack:
+        logger.warning("clear_hook_state: Hook stack was not empty")
+    _hook_state.reset(token)
 
 
 def current_hook() -> LifeCycleHook:
     """Get the current :class:`LifeCycleHook`"""
-    hook_stack = _HOOK_STATE.get()
+    hook_stack = _hook_state.get()
     if not hook_stack:
         msg = "No life cycle hook is active. Are you rendering in a layout?"
         raise RuntimeError(msg)
@@ -249,7 +260,7 @@ class LifeCycleHook:
         This method is called by a layout before entering the render method
         of this hook's associated component.
         """
-        hook_stack = _HOOK_STATE.get()
+        hook_stack = _hook_state.get()
         if hook_stack:
             parent = hook_stack[-1]
             self._context_providers.update(parent._context_providers)
@@ -257,5 +268,5 @@ class LifeCycleHook:
 
     def unset_current(self) -> None:
         """Unset this hook as the active hook in this thread"""
-        if _HOOK_STATE.get().pop() is not self:
+        if _hook_state.get().pop() is not self:
             raise RuntimeError("Hook stack is in an invalid state")  # nocov

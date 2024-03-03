@@ -36,7 +36,11 @@ from reactpy.config import (
     REACTPY_CHECK_VDOM_SPEC,
     REACTPY_DEBUG_MODE,
 )
-from reactpy.core._life_cycle_hook import LifeCycleHook
+from reactpy.core._life_cycle_hook import (
+    LifeCycleHook,
+    clear_hook_state,
+    create_hook_state,
+)
 from reactpy.core.state_recovery import StateRecoverySerializer
 from reactpy.core.types import (
     ComponentType,
@@ -69,6 +73,7 @@ class Layout:
         "client_state",
         "_state_recovery_serializer",
         "_state_var_lock",
+        "_hook_state_token",
     )
 
     if not hasattr(abc.ABC, "__weakref__"):  # nocov
@@ -92,6 +97,8 @@ class Layout:
         self._state_recovery_serializer = serializer
 
     async def __aenter__(self) -> Layout:
+        self._hook_state_token = create_hook_state()
+
         # create attributes here to avoid access before entering context manager
         self._event_handlers: EventHandlerDict = {}
         self._render_tasks: set[Task[LayoutUpdateMessage]] = set()
@@ -127,6 +134,8 @@ class Layout:
         del self._rendering_queue
         del self._root_life_cycle_state_id
         del self._model_states_by_life_cycle_state_id
+
+        clear_hook_state(self._hook_state_token)
 
     def start_rendering(self) -> None:
         self._schedule_render_task(self._root_life_cycle_state_id)
