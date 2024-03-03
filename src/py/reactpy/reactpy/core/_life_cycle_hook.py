@@ -23,15 +23,10 @@ class EffectFunc(Protocol):
 logger = logging.getLogger(__name__)
 
 _hook_state = ContextVar("_hook_state")
-_state_updates = ContextVar("_state_updates")
 
 
 def create_hook_state(initial: list | None = None) -> Token[list]:
     return _hook_state.set(initial or [])
-
-
-def create_state_updates() -> Token[dict]:
-    return _state_updates.set({})
 
 
 def clear_hook_state(token: Token[list]) -> None:
@@ -41,16 +36,8 @@ def clear_hook_state(token: Token[list]) -> None:
     _hook_state.reset(token)
 
 
-def clear_state_updates(token: Token[dict]) -> None:
-    _state_updates.reset(token)
-
-
 def get_hook_state() -> list[LifeCycleHook]:
     return _hook_state.get()
-
-
-def get_state_updates() -> list[_CurrentState]:
-    return _state_updates.get()
 
 
 def get_current_hook() -> LifeCycleHook:
@@ -151,6 +138,7 @@ class LifeCycleHook:
         "component",
         "reconnecting",
         "client_state",
+        "_updated_states",
     )
 
     component: ComponentType
@@ -160,6 +148,7 @@ class LifeCycleHook:
         schedule_render: Callable[[], None],
         reconnecting: Ref,
         client_state: dict[str, Any],
+        updated_states: dict[str, Any],
     ) -> None:
         self._context_providers: dict[Context[Any], ContextProviderType[Any]] = {}
         self._schedule_render_callback = schedule_render
@@ -173,10 +162,11 @@ class LifeCycleHook:
         self._render_access = Semaphore(1)  # ensure only one render at a time
         self.reconnecting = reconnecting
         self.client_state = client_state or {}
+        self._updated_states = updated_states
 
     def add_state_update(self, updated_state: _CurrentState | Ref) -> None:
         if updated_state.key:
-            get_state_updates()[updated_state.key] = updated_state.value
+            self._updated_states[updated_state.key] = updated_state.value
 
     def schedule_render(self) -> None:
         if self._scheduled_render:
