@@ -161,7 +161,10 @@ class Layout:
                 if state_updates:
                     await send(
                         StateUpdateMessage(
-                            type="state-update", state_vars=state_updates
+                            type="state-update",
+                            state_vars=self._state_recovery_serializer.serialize_state_vars(
+                                state_updates
+                            ),
                         )
                     )
             finally:
