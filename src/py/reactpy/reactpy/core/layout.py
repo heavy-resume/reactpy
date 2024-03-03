@@ -39,8 +39,10 @@ from reactpy.config import (
 from reactpy.core._life_cycle_hook import (
     LifeCycleHook,
     clear_hook_state,
+    clear_state_updates,
     create_hook_state,
-    get_hook_state,
+    create_state_updates,
+    get_state_updates,
 )
 from reactpy.core.state_recovery import StateRecoverySerializer
 from reactpy.core.types import (
@@ -210,7 +212,8 @@ class Layout:
     async def _create_layout_update(
         self, old_state: _ModelState
     ) -> LayoutUpdateMessage:
-        token = create_hook_state()
+        hook_stack_token = create_hook_state()
+        state_updates_token = create_state_updates()
         new_state = _copy_component_model_state(old_state)
         component = new_state.life_cycle_state.component
 
@@ -221,15 +224,12 @@ class Layout:
             validate_vdom_json(new_state.model.current)
 
         state_vars = (
-            self._state_recovery_serializer.serialize_state_vars(
-                new_state.life_cycle_state.hook._updated_states
-            )
+            self._state_recovery_serializer.serialize_state_vars(get_state_updates())
             if self._state_recovery_serializer
             else {}
         )
-        # TODO: refactor to context var
-        new_state.life_cycle_state.hook._updated_states.clear()
-        clear_hook_state(token)
+        clear_hook_state(hook_stack_token)
+        clear_state_updates(state_updates_token)
         return LayoutUpdateMessage(
             type="layout-update",
             path=new_state.patch_path,
@@ -596,9 +596,6 @@ def _make_component_model_state(
     reconnecting: bool,
     client_state: dict[str, Any],
 ) -> _ModelState:
-    updated_states = (
-        parent.life_cycle_state or parent.parent_life_cycle_state
-    ).hook._updated_states
     return _ModelState(
         parent=parent,
         index=index,
@@ -612,7 +609,6 @@ def _make_component_model_state(
             schedule_render,
             reconnecting,
             client_state,
-            updated_states,
         ),
     )
 
@@ -661,9 +657,6 @@ def _update_component_model_state(
                 schedule_render,
                 reconnecting,
                 client_state,
-                (
-                    new_parent.life_cycle_state or new_parent.parent_life_cycle_state
-                ).hook._updated_states,
             )
         ),
     )
@@ -682,9 +675,6 @@ def _make_element_model_state(
         patch_path=f"{parent.patch_path}/children/{index}",
         children_by_key={},
         targets_by_event={},
-        parent_life_cycle_state=(
-            parent.life_cycle_state or parent.parent_life_cycle_state
-        ),
     )
 
 
@@ -701,9 +691,6 @@ def _update_element_model_state(
         patch_path=old_model_state.patch_path,
         children_by_key={},
         targets_by_event={},
-        parent_life_cycle_state=(
-            new_parent.life_cycle_state or new_parent.parent_life_cycle_state
-        ),
     )
 
 
@@ -718,7 +705,6 @@ class _ModelState:
         "index",
         "key",
         "life_cycle_state",
-        "parent_life_cycle_state",
         "model",
         "patch_path",
         "targets_by_event",
@@ -734,7 +720,6 @@ class _ModelState:
         children_by_key: dict[Key, _ModelState],
         targets_by_event: dict[str, str],
         life_cycle_state: _LifeCycleState | None = None,
-        parent_life_cycle_state: _LifeCycleState | None = None,
     ):
         self.index = index
         """The index of the element amongst its siblings"""
@@ -764,8 +749,6 @@ class _ModelState:
         self.life_cycle_state = life_cycle_state
         """The state for the element's component (if it has one)"""
 
-        self.parent_life_cycle_state = parent_life_cycle_state
-
     @property
     def is_component_state(self) -> bool:
         return self.life_cycle_state is not None
@@ -789,7 +772,6 @@ def _make_life_cycle_state(
     schedule_render: Callable[[_LifeCycleStateId], None],
     reconnecting: bool,
     client_state: dict[str, Any],
-    updated_states: dict[str, Any],
 ) -> _LifeCycleState:
     life_cycle_state_id = _LifeCycleStateId(uuid4().hex)
     return _LifeCycleState(
@@ -798,7 +780,6 @@ def _make_life_cycle_state(
             lambda: schedule_render(life_cycle_state_id),
             reconnecting=reconnecting,
             client_state=client_state,
-            updated_states=updated_states,
         ),
         component,
     )
