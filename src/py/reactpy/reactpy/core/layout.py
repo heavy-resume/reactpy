@@ -604,7 +604,7 @@ def _new_root_model_state(
         children_by_key={},
         targets_by_event={},
         life_cycle_state=_make_life_cycle_state(
-            component, schedule_render, reconnecting, client_state, {}
+            component, schedule_render, reconnecting, client_state
         ),
     )
 
