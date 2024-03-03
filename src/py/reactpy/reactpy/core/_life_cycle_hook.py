@@ -30,8 +30,8 @@ def create_hook_state() -> Token[list]:
     return _hook_state.set([])
 
 
-def create_state_updates() -> Token[list]:
-    return _state_updates.set([])
+def create_state_updates() -> Token[dict]:
+    return _state_updates.set({})
 
 
 def clear_hook_state(token: Token[list]) -> None:
@@ -41,7 +41,7 @@ def clear_hook_state(token: Token[list]) -> None:
     _hook_state.reset(token)
 
 
-def clear_state_updates(token: Token[list]) -> None:
+def clear_state_updates(token: Token[dict]) -> None:
     _state_updates.reset(token)
 
 
