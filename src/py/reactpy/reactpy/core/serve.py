@@ -105,11 +105,12 @@ async def _single_incoming_loop(
     task_group: TaskGroup,
     layout: LayoutType[LayoutUpdateMessage, LayoutEventMessage],
     recv: RecvCoroutine,
+    send: SendCoroutine,
 ) -> None:
     while True:
         # We need to fire and forget here so that we avoid waiting on the completion
         # of this event handler before receiving and running the next one.
-        task_group.start_soon(layout.deliver, await recv())
+        task_group.start_soon(layout.deliver, await recv(), send)
 
 
 class WebsocketServer:
