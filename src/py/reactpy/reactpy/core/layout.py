@@ -97,8 +97,6 @@ class Layout:
         self._state_recovery_serializer = serializer
 
     async def __aenter__(self) -> Layout:
-        self._hook_state_token = create_hook_state()
-
         # create attributes here to avoid access before entering context manager
         self._event_handlers: EventHandlerDict = {}
         self._render_tasks: set[Task[LayoutUpdateMessage]] = set()
@@ -111,8 +109,6 @@ class Layout:
 
         self._root_life_cycle_state_id = root_id = root_model_state.life_cycle_state.id
         self._model_states_by_life_cycle_state_id = {root_id: root_model_state}
-        # TODO: what to do with this?
-        # self._schedule_render_task(root_id)
 
         return self
 
@@ -134,8 +130,6 @@ class Layout:
         del self._rendering_queue
         del self._root_life_cycle_state_id
         del self._model_states_by_life_cycle_state_id
-
-        clear_hook_state(self._hook_state_token)
 
     def start_rendering(self) -> None:
         self._schedule_render_task(self._root_life_cycle_state_id)
@@ -176,7 +170,7 @@ class Layout:
                     f"{model_state_id!r} - component already unmounted"
                 )
             else:
-                await self._create_layout_update(model_state, get_hook_state())
+                await self._create_layout_update(model_state)
             # this might seem counterintuitive. What's happening is that events can get kicked off
             # and currently there's no (obvious) visibility on if we're waiting for them to finish
             # so this will wait up to 0.15 * 5 = 750 ms to see if any renders come in before
@@ -203,7 +197,7 @@ class Layout:
                     f"{model_state_id!r} - component already unmounted"
                 )
             else:
-                return await self._create_layout_update(model_state, get_hook_state())
+                return await self._create_layout_update(model_state)
 
     async def _concurrent_render(self) -> LayoutUpdateMessage:
         """Await the next available render. This will block until a component is updated"""
@@ -214,9 +208,9 @@ class Layout:
         return update_task.result()
 
     async def _create_layout_update(
-        self, old_state: _ModelState, incoming_hook_state: list
+        self, old_state: _ModelState
     ) -> LayoutUpdateMessage:
-        token = create_hook_state(copy.copy(incoming_hook_state))
+        token = create_hook_state()
         new_state = _copy_component_model_state(old_state)
         component = new_state.life_cycle_state.component
 
@@ -233,6 +227,7 @@ class Layout:
             if self._state_recovery_serializer
             else {}
         )
+        # TODO: refactor to context var
         new_state.life_cycle_state.hook._updated_states.clear()
         clear_hook_state(token)
         return LayoutUpdateMessage(
