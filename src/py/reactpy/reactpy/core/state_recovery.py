@@ -28,7 +28,7 @@ class StateRecoveryManager:
         pepper: str,
         otp_key: str | None = None,
         otp_interval: int = (4 * 60 * 60),
-        otp_digits: int = 32,
+        otp_digits: int = 10,
         otp_max_age: int = (48 * 60 * 60),
         max_num_state_objects: int = 256,
         max_object_length: int = 40000,
