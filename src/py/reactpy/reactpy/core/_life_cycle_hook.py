@@ -26,8 +26,8 @@ _hook_state = ContextVar("_hook_state")
 _state_updates = ContextVar("_state_updates")
 
 
-def create_hook_state() -> Token[list]:
-    return _hook_state.set([])
+def create_hook_state(initial: list | None = None) -> Token[list]:
+    return _hook_state.set(initial or [])
 
 
 def create_state_updates() -> Token[dict]:
