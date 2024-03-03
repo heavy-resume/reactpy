@@ -102,6 +102,8 @@ class Layout:
         self._state_recovery_serializer = serializer
 
     async def __aenter__(self) -> Layout:
+        self._hook_state_token = create_hook_state()
+
         # create attributes here to avoid access before entering context manager
         self._event_handlers: EventHandlerDict = {}
         self._render_tasks: set[Task[LayoutUpdateMessage]] = set()
@@ -192,7 +194,7 @@ class Layout:
                     f"{model_state_id!r} - component already unmounted"
                 )
             else:
-                await self._create_layout_update(model_state)
+                await self._create_layout_update(model_state, get_hook_state())
             # this might seem counterintuitive. What's happening is that events can get kicked off
             # and currently there's no (obvious) visibility on if we're waiting for them to finish
             # so this will wait up to 0.15 * 5 = 750 ms to see if any renders come in before
@@ -219,7 +221,7 @@ class Layout:
                     f"{model_state_id!r} - component already unmounted"
                 )
             else:
-                return await self._create_layout_update(model_state)
+                return await self._create_layout_update(model_state, get_hook_state())
 
     async def _concurrent_render(self) -> LayoutUpdateMessage:
         """Await the next available render. This will block until a component is updated"""
@@ -230,9 +232,9 @@ class Layout:
         return update_task.result()
 
     async def _create_layout_update(
-        self, old_state: _ModelState
+        self, old_state: _ModelState, incoming_hook_state: list
     ) -> LayoutUpdateMessage:
-        hook_stack_token = create_hook_state()
+        hook_stack_token = create_hook_state(copy.copy(incoming_hook_state))
         state_updates_token = create_state_updates()
         new_state = _copy_component_model_state(old_state)
         component = new_state.life_cycle_state.component
@@ -602,7 +604,7 @@ def _new_root_model_state(
         children_by_key={},
         targets_by_event={},
         life_cycle_state=_make_life_cycle_state(
-            component, schedule_render, reconnecting, client_state
+            component, schedule_render, reconnecting, client_state, {}
         ),
     )
 
