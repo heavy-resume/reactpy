@@ -160,7 +160,6 @@ class LifeCycleHook:
         schedule_render: Callable[[], None],
         reconnecting: Ref,
         client_state: dict[str, Any],
-        updated_states: dict[str, Any],
     ) -> None:
         self._context_providers: dict[Context[Any], ContextProviderType[Any]] = {}
         self._schedule_render_callback = schedule_render
