@@ -31,9 +31,7 @@ class StateRecoveryManager:
         otp_digits: int = 10,  # 10 is the max allowed
         otp_max_age: int = (48 * 60 * 60),
         # OTP code is actually three codes, in the past and future concatenated
-        otp_mixer: float = (
-            365 * 24 * 60 * 60 * 3
-        ),
+        otp_mixer: float = (365 * 24 * 60 * 60 * 3),
         max_num_state_objects: int = 256,
         max_object_length: int = 40000,
         default_serializer: Callable[[Any], bytes] | None = None,
@@ -119,11 +117,11 @@ class StateRecoverySerializer:
         default_serializer: Callable[[Any], bytes] | None = None,
         deserializer_map: dict[type, Callable[[Any], Any]] | None = None,
     ) -> None:
-        target_time = target_time or time.time()
         self._totp = totp
         self._otp_mixer = otp_mixer
-        otp_code = totp.at(target_time)
+        target_time = target_time or time.time()
         self._target_time = target_time
+        otp_code = self._get_otp_code(target_time)
         self._otp_max_age = otp_max_age
         self._otp_code = otp_code.encode("utf-8")
         self._pepper = pepper.encode("utf-8")
@@ -136,11 +134,8 @@ class StateRecoverySerializer:
         self._deserializer_map = deserializer_map or {}
 
     def _get_otp_code(self, target_time: float) -> str:
-        return (
-            self._totp.at(target_time)
-            + self._totp.at(target_time - self._otp_mixer)
-            + self._totp.at(target_time + self._otp_mixer)
-        )
+        at = self._totp.at
+        return f"{at(target_time)}{at(target_time - self._otp_mixer)}{at(target_time + self._otp_mixer)}"
 
     def serialize_state_vars(
         self, state_vars: dict[str, Any]
@@ -216,7 +211,7 @@ class StateRecoverySerializer:
         self, key: str, type_id: bytes, data: bytes, signature: str
     ) -> bool:
         future_time = self._target_time + self._totp.interval
-        otp_code = self._totp.at(future_time).encode("utf-8")
+        otp_code = self._get_otp_code(future_time).encode("utf-8")
         return self._sign_serialization(key, type_id, data, otp_code) == signature
 
     def _try_older_codes_and_see_if_one_checks_out(
@@ -224,7 +219,7 @@ class StateRecoverySerializer:
     ) -> bool:
         while True:
             past_time = self._target_time - self._totp.interval
-            otp_code = self._totp.at(past_time).encode("utf-8")
+            otp_code = self._get_otp_code(past_time).encode("utf-8")
             if self._sign_serialization(key, type_id, data, otp_code) == signature:
                 return True
             if past_time < self._target_time - self._otp_max_age:
