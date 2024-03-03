@@ -92,10 +92,6 @@ def use_state(
     return State(current_state.value, current_state.dispatch)
 
 
-
-def sha256_hexdigest(s: str) -> str:
-
-
 def get_caller_info():
     # Get the current stack frame and then the frame above it
     caller_frame = sys._getframe(2)
