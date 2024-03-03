@@ -28,8 +28,12 @@ class StateRecoveryManager:
         pepper: str,
         otp_key: str | None = None,
         otp_interval: int = (4 * 60 * 60),
-        otp_digits: int = 10,
+        otp_digits: int = 10,  # 10 is the max allowed
         otp_max_age: int = (48 * 60 * 60),
+        # OTP code is actually three codes, in the past and future concatenated
+        otp_mixer: float = (
+            365 * 24 * 60 * 60 * 3
+        ),
         max_num_state_objects: int = 256,
         max_object_length: int = 40000,
         default_serializer: Callable[[Any], bytes] | None = None,
@@ -45,6 +49,7 @@ class StateRecoveryManager:
         self._otp_max_age = otp_max_age
         self._default_serializer = default_serializer
         self._deserializer_map = deserializer_map or {}
+        self._otp_mixer = otp_mixer
 
         self._map_objects_to_ids(
             [
@@ -85,6 +90,7 @@ class StateRecoveryManager:
             totp=self._totp,
             target_time=target_time,
             otp_max_age=self._otp_max_age,
+            otp_mixer=self._otp_mixer,
             pepper=self._pepper,
             salt=salt,
             object_to_type_id=self._object_to_type_id,
@@ -103,6 +109,7 @@ class StateRecoverySerializer:
         totp: pyotp.TOTP,
         target_time: float | None,
         otp_max_age: int,
+        otp_mixer: float,
         pepper: str,
         salt: str,
         object_to_type_id: dict[Any, bytes],
@@ -113,11 +120,12 @@ class StateRecoverySerializer:
         deserializer_map: dict[type, Callable[[Any], Any]] | None = None,
     ) -> None:
         target_time = target_time or time.time()
+        self._totp = totp
+        self._otp_mixer = otp_mixer
         otp_code = totp.at(target_time)
         self._target_time = target_time
         self._otp_max_age = otp_max_age
         self._otp_code = otp_code.encode("utf-8")
-        self._totp = totp
         self._pepper = pepper.encode("utf-8")
         self._salt = salt.encode("utf-8")
         self._object_to_type_id = object_to_type_id
@@ -126,6 +134,13 @@ class StateRecoverySerializer:
         self._max_num_state_objects = max_num_state_objects
         self._default_serializer = default_serializer
         self._deserializer_map = deserializer_map or {}
+
+    def _get_otp_code(self, target_time: float) -> str:
+        return (
+            self._totp.at(target_time)
+            + self._totp.at(target_time - self._otp_mixer)
+            + self._totp.at(target_time + self._otp_mixer)
+        )
 
     def serialize_state_vars(
         self, state_vars: dict[str, Any]
