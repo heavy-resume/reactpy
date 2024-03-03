@@ -237,8 +237,7 @@ class Layout:
             if self._state_recovery_serializer
             else {}
         )
-        clear_hook_state(hook_stack_token)
-        clear_state_updates(state_updates_token)
+        clear_hook_state(token)
         return LayoutUpdateMessage(
             type="layout-update",
             path=new_state.patch_path,
