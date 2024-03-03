@@ -145,10 +145,12 @@ class Layout:
         handler = self._event_handlers.get(event["target"])
 
         if handler is not None:
+            state_update_token = create_state_updates()
             try:
                 await handler.function(event["data"])
             except Exception:
                 logger.exception(f"Failed to execute event handler {handler}")
+            clear_state_updates(state_update_token)
         else:
             logger.info(
                 f"Ignored event - handler {event['target']!r} "
