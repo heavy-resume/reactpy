@@ -40,6 +40,7 @@ from reactpy.core._life_cycle_hook import (
     LifeCycleHook,
     clear_hook_state,
     create_hook_state,
+    get_current_hook,
 )
 from reactpy.core.state_recovery import StateRecoverySerializer
 from reactpy.core.types import (
@@ -91,7 +92,6 @@ class Layout:
         self.reconnecting = Ref(False)
         self._state_recovery_serializer = None
         self.client_state = {}
-        self._state_var_lock = asyncio.Lock()
 
     def set_recovery_serializer(self, serializer: StateRecoverySerializer) -> None:
         self._state_recovery_serializer = serializer
@@ -203,7 +203,7 @@ class Layout:
                     f"{model_state_id!r} - component already unmounted"
                 )
             else:
-                return await self._create_layout_update(model_state)
+                return await self._create_layout_update(model_state, get_current_hook())
 
     async def _concurrent_render(self) -> LayoutUpdateMessage:
         """Await the next available render. This will block until a component is updated"""
@@ -214,8 +214,9 @@ class Layout:
         return update_task.result()
 
     async def _create_layout_update(
-        self, old_state: _ModelState
+        self, old_state: _ModelState, incoming_hook_state: list
     ) -> LayoutUpdateMessage:
+        token = create_hook_state(copy.copy(incoming_hook_state))
         new_state = _copy_component_model_state(old_state)
         component = new_state.life_cycle_state.component
 
@@ -225,14 +226,15 @@ class Layout:
         if REACTPY_CHECK_VDOM_SPEC.current:
             validate_vdom_json(new_state.model.current)
 
-        async with self._state_var_lock:
-            tmp_state_vars = copy.copy(new_state.life_cycle_state.hook._updated_states)
-            new_state.life_cycle_state.hook._updated_states.clear()
         state_vars = (
-            self._state_recovery_serializer.serialize_state_vars(tmp_state_vars)
+            self._state_recovery_serializer.serialize_state_vars(
+                new_state.life_cycle_state.hook._updated_states
+            )
             if self._state_recovery_serializer
             else {}
         )
+        new_state.life_cycle_state.hook._updated_states.clear()
+        clear_hook_state(token)
         return LayoutUpdateMessage(
             type="layout-update",
             path=new_state.patch_path,

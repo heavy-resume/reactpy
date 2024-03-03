@@ -32,7 +32,7 @@ class Ref(Generic[_RefValue]):
     def __init__(
         self, initial_value: _RefValue = _UNDEFINED, key: str | None = None
     ) -> None:
-        from reactpy.core._life_cycle_hook import current_hook
+        from reactpy.core._life_cycle_hook import get_current_hook
 
         if initial_value is not _UNDEFINED:
             self.current = initial_value
@@ -40,7 +40,7 @@ class Ref(Generic[_RefValue]):
         self.key = key
         self._hook = None
         if key:
-            hook = current_hook()
+            hook = get_current_hook()
             hook.add_state_update(self)
             self._hook = hook
 

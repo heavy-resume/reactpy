@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 _hook_state = ContextVar("reactpy_hook_state")
 
 
-def create_hook_state() -> Token[list]:
-    return _hook_state.set([])
+def create_hook_state(initial: list | None = None) -> Token[list]:
+    return _hook_state.set(initial or [])
 
 
 def clear_hook_state(token: Token[list]) -> None:
@@ -36,7 +36,7 @@ def clear_hook_state(token: Token[list]) -> None:
     _hook_state.reset(token)
 
 
-def current_hook() -> LifeCycleHook:
+def get_current_hook() -> LifeCycleHook:
     """Get the current :class:`LifeCycleHook`"""
     hook_stack = _hook_state.get()
     if not hook_stack:

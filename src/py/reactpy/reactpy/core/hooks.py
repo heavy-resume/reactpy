@@ -22,7 +22,7 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from reactpy.config import REACTPY_DEBUG_MODE
-from reactpy.core._life_cycle_hook import current_hook
+from reactpy.core._life_cycle_hook import get_current_hook
 from reactpy.core.state_recovery import StateRecoveryFailureError
 from reactpy.core.types import Context, Key, State, VdomDict
 from reactpy.utils import Ref
@@ -78,7 +78,7 @@ def use_state(
     if server_only:
         key = None
     else:
-        hook = current_hook()
+        hook = get_current_hook()
         caller_info = get_caller_info()
         key = get_state_key(caller_info)
         if hook.reconnecting.current:
@@ -135,7 +135,7 @@ class _CurrentState(Generic[_Type]):
         else:
             self.value = initial_value
 
-        hook = current_hook()
+        hook = get_current_hook()
         hook.add_state_update(self)
 
         def dispatch(new: _Type | Callable[[_Type], _Type]) -> None:
@@ -193,7 +193,7 @@ def use_effect(
     """
     memoize = use_memo(dependencies=dependencies)
     last_clean_callback: Ref[_EffectCleanFunc | None] = use_ref(None)
-    hook = current_hook()
+    hook = get_current_hook()
     if hook.reconnecting.current:
         if not isinstance(dependencies, ReconnectingOnly):
             return
@@ -270,7 +270,7 @@ def use_debug_value(
 
     if REACTPY_DEBUG_MODE.current and old.current != new:
         old.current = new
-        logger.debug(f"{current_hook().component} {new}")
+        logger.debug(f"{get_current_hook().component} {new}")
 
 
 def create_context(default_value: _Type) -> Context[_Type]:
@@ -298,7 +298,7 @@ def use_context(context: Context[_Type]) -> _Type:
 
     See the full :ref:`Use Context` docs for more information.
     """
-    hook = current_hook()
+    hook = get_current_hook()
     provider = hook.get_context_provider(context)
 
     if provider is None:
@@ -328,7 +328,7 @@ class _ContextProvider(Generic[_Type]):
         self.value = value
 
     def render(self) -> VdomDict:
-        current_hook().set_context_provider(self)
+        get_current_hook().set_context_provider(self)
         return {"tagName": "", "children": self.children}
 
     def __repr__(self) -> str:
@@ -525,7 +525,7 @@ def use_ref(initial_value: _Type, server_only: bool = True) -> Ref[_Type]:
     if server_only:
         key = None
     else:
-        hook = current_hook()
+        hook = get_current_hook()
         caller_info = get_caller_info()
         key = get_state_key(caller_info)
         if hook.reconnecting.current:
@@ -539,7 +539,7 @@ def use_ref(initial_value: _Type, server_only: bool = True) -> Ref[_Type]:
 
 
 def _use_const(function: Callable[[], _Type]) -> _Type:
-    return current_hook().use_state(function)
+    return get_current_hook().use_state(function)
 
 
 def _try_to_infer_closure_values(
