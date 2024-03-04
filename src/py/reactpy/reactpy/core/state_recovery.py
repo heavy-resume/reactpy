@@ -155,15 +155,14 @@ class StateRecoverySerializer:
         return result
 
     def _serialize(self, key: str, obj: object) -> tuple[str, str, str]:
+        type_id = "1"  # bool
         if obj is None:
             return "0", "", ""
         match obj:
             case True:
                 result = "true"
-                type_id = 1
             case False:
                 result = "false"
-                type_id = 1
             case _:
                 obj_type = type(obj)
                 if obj_type in (list, tuple):
