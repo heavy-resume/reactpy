@@ -95,6 +95,7 @@ export type SimpleReactPyClientProps = {
   reconnectOptions?: ReconnectProps;
   forceRerender?: boolean;
   idleDisconnectTimeSeconds?: number;
+  connectionTimeout?: number;
 };
 
 /**
@@ -160,6 +161,7 @@ export class SimpleReactPyClient
   private isReady: boolean;
   private salt: string;
   private shouldReconnect: boolean;
+  private connectionTimeout: number;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
@@ -173,6 +175,7 @@ export class SimpleReactPyClient
     );
     this.idleDisconnectTimeMillis = (props.idleDisconnectTimeSeconds || 240) * 1000;
     this.forceRerender = props.forceRerender !== undefined ? props.forceRerender : false;
+    this.connectionTimeout = props.connectionTimeout || 5000;
     this.lastMessageTime = Date.now()
     this.reconnectOptions = props.reconnectOptions
     this.sleeping = false;
@@ -339,6 +342,7 @@ function createWebSocket(
   props: {
     url: string;
     readyPromise: Promise<void>;
+    connectionTimeout: number;
     onOpen?: () => void;
     onMessage: (message: MessageEvent<any>) => void;
     onClose?: () => void;
@@ -363,7 +367,17 @@ function createWebSocket(
       return;
     }
     socket.current = new WebSocket(props.url);
+    const connectionTimeout = props.connectionTimeout; // Timeout in milliseconds
+
+    const timeoutId = setTimeout(() => {
+      // If the socket is still not open, close it to trigger the onerror event
+      if (socket.current && socket.current.readyState !== WebSocket.OPEN) {
+        socket.current.close();
+        console.error('Connection attempt timed out');
+      }
+    }, connectionTimeout);
     socket.current.onopen = () => {
+      clearTimeout(timeoutId);
       everConnected = true;
       logger.log("client connected");
       // interval = startInterval;
