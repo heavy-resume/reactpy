@@ -44,7 +44,16 @@ def component(
 class Component:
     """An object for rending component models."""
 
-    __slots__ = "__weakref__", "_func", "_args", "_kwargs", "_sig", "key", "type"
+    __slots__ = (
+        "__weakref__",
+        "_func",
+        "_args",
+        "_kwargs",
+        "_sig",
+        "key",
+        "type",
+        "priority",
+    )
 
     def __init__(
         self,
