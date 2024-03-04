@@ -160,9 +160,9 @@ class StateRecoverySerializer:
             return "0", "", ""
         match obj:
             case True:
-                result = "true"
+                result = b"true"
             case False:
-                result = "false"
+                result = b"false"
             case _:
                 obj_type = type(obj)
                 if obj_type in (list, tuple):
