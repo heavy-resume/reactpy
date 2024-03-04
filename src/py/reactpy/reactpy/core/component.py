@@ -7,7 +7,11 @@ from typing import Any, Callable
 from reactpy.core.types import ComponentType, VdomDict
 
 
-def component(priority: int = 0) -> Callable[..., Component]:
+def component(
+    function: Callable[..., ComponentType | VdomDict | str | None] | None = None,
+    *,
+    priority: int = 0,
+) -> Callable[..., Component]:
     """A decorator for defining a new component.
 
     Parameters:
@@ -32,6 +36,8 @@ def component(priority: int = 0) -> Callable[..., Component]:
 
         return constructor
 
+    if function:
+        return _component(function)
     return _component
 
 
