@@ -180,7 +180,6 @@ export class SimpleReactPyClient
     this.isReady = false
     this.salt = "";
     this.shouldReconnect = false;
-    this.lastReconnectAttempt = 0;
 
     this.onMessage(messageTypes.reconnectingCheck, () => { this.indicateReconnect() })
     this.onMessage(messageTypes.isReady, (msg) => { this.isReady = true; this.salt = msg.salt; });
