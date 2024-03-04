@@ -239,6 +239,11 @@ export class SimpleReactPyClient
   }
 
   reconnect(onOpen?: () => void, interval: number = 750, retriesRemaining: number = 30): void {
+    const intervalJitter = this.reconnectOptions?.intervalJitter || 1.1;
+    const backoffRate = this.reconnectOptions?.backoffRate || 1.1;
+    const maxInterval = this.reconnectOptions?.maxInterval || 20000;
+    const maxRetries = this.reconnectOptions?.maxRetries || retriesRemaining;
+
     if (this.shouldReconnect) {
       // already reconnecting
       return;
@@ -247,11 +252,6 @@ export class SimpleReactPyClient
 
     let lastSuccess = 0;
     window.setTimeout(() => {
-
-      const intervalJitter = this.reconnectOptions?.intervalJitter || 1.1;
-      const backoffRate = this.reconnectOptions?.backoffRate || 1.1;
-      const maxInterval = this.reconnectOptions?.maxInterval || 20000;
-      const maxRetries = this.reconnectOptions?.maxRetries || retriesRemaining;
 
       if (maxRetries > retriesRemaining)
         retriesRemaining = maxRetries;
@@ -269,6 +269,7 @@ export class SimpleReactPyClient
           if (Date.now() - lastSuccess > maxInterval * 2) {
             interval = 750;
           }
+          this.shouldReconnect = false;
           this.isReconnecting = true;
           this.isReady = false;
           if (this.socketLoopIntervalId)
