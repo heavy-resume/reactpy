@@ -170,7 +170,7 @@ class LifeCycleHook:
     def add_state_update(self, updated_state: _CurrentState | Ref) -> None:
         if (
             updated_state.key
-            and self._previous_states[updated_state.key] != updated_state.value
+            and self._previous_states.get(updated_state.key) is not updated_state.value
         ):
             self._updated_states[updated_state.key] = updated_state.value
 
