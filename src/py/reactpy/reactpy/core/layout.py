@@ -79,6 +79,7 @@ class Layout:
         "_state_recovery_serializer",
         "_state_var_lock",
         "_hook_state_token",
+        "_previous_states",
     )
 
     if not hasattr(abc.ABC, "__weakref__"):  # nocov
@@ -96,6 +97,7 @@ class Layout:
         self.reconnecting = Ref(False)
         self._state_recovery_serializer = None
         self.client_state = {}
+        self._previous_states = {}
 
     def set_recovery_serializer(self, serializer: StateRecoverySerializer) -> None:
         self._state_recovery_serializer = serializer
@@ -595,7 +597,7 @@ def _new_root_model_state(
         children_by_key={},
         targets_by_event={},
         life_cycle_state=_make_life_cycle_state(
-            component, schedule_render, reconnecting, client_state, {}, {}
+            component, schedule_render, reconnecting, client_state, {}, self._previous_states
         ),
     )
 
