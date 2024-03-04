@@ -65,7 +65,7 @@ class StateRecoveryManager:
         self._object_to_type_id = {}
         self._type_id_to_object = {}
         for idx, typ in enumerate(
-            (None, str, int, float, bool, list, tuple, UUID, *serializable_types)
+            (None, bool, str, int, float, list, tuple, UUID, *serializable_types)
         ):
             idx_as_bytes = str(idx).encode("utf-8")
             self._object_to_type_id[typ] = idx_as_bytes
@@ -160,8 +160,10 @@ class StateRecoverySerializer:
         match obj:
             case True:
                 result = "true"
+                type_id = 1
             case False:
                 result = "false"
+                type_id = 1
             case _:
                 obj_type = type(obj)
                 if obj_type in (list, tuple):
