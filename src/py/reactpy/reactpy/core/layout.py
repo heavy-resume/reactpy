@@ -106,6 +106,9 @@ class Layout:
         self._state_recovery_serializer = serializer
 
     async def __aenter__(self) -> Layout:
+        return await self.start()
+
+    async def start(self) -> Layout:
         self._hook_state_token = create_hook_state()
 
         # create attributes here to avoid access before entering context manager
@@ -128,6 +131,9 @@ class Layout:
         return self
 
     async def __aexit__(self, *exc: Any) -> None:
+        return await self.finish()
+
+    async def finish(self) -> None:
         root_csid = self._root_life_cycle_state_id
         root_model_state = self._model_states_by_life_cycle_state_id[root_csid]
 
@@ -154,7 +160,7 @@ class Layout:
     def start_rendering_for_reconnect(self) -> None:
         self._rendering_queue.put(self._root_life_cycle_state_id)
 
-    async def deliver(self, event: LayoutEventMessage, send: Coroutine) -> None:
+    async def deliver(self, event: LayoutEventMessage) -> None:
         """Dispatch an event to the targeted handler"""
         # It is possible for an element in the frontend to produce an event
         # associated with a backend model that has been deleted. We only handle
@@ -168,7 +174,7 @@ class Layout:
             except Exception:
                 logger.exception(f"Failed to execute event handler {handler}")
         else:
-            logger.info(
+            logger.warning(
                 f"Ignored event - handler {event['target']!r} "
                 "does not exist or its component unmounted"
             )

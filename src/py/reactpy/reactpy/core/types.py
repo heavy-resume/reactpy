@@ -74,7 +74,7 @@ class LayoutType(Protocol[_Render_co, _Event_contra]):
     async def render(self) -> _Render_co:
         """Render an update to a view"""
 
-    async def deliver(self, event: _Event_contra, send: Callable) -> None:
+    async def deliver(self, event: _Event_contra) -> None:
         """Relay an event to its respective handler"""
 
     async def __aenter__(self) -> LayoutType[_Render_co, _Event_contra]:

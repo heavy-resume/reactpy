@@ -110,7 +110,7 @@ async def _single_incoming_loop(
     while True:
         # We need to fire and forget here so that we avoid waiting on the completion
         # of this event handler before receiving and running the next one.
-        task_group.start_soon(layout.deliver, await recv(), send)
+        task_group.start_soon(layout.deliver, await recv())
 
 
 class WebsocketServer:
@@ -197,8 +197,14 @@ class WebsocketServer:
             layout.client_state = {}
         else:
             salt = client_state_msg["salt"]
-        layout.start_rendering_for_reconnect()
-        await layout.render_until_queue_empty()
+        try:
+            layout.start_rendering_for_reconnect()
+            await layout.render_until_queue_empty()
+        except StateRecoveryFailureError:
+            logger.warning("Client state non-recoverable. Starting fresh")
+            await layout.finish()
+            await layout.start()
+            layout.start_rendering()
         layout.reconnecting.set_current(False)
         layout.client_state = {}
         return salt
