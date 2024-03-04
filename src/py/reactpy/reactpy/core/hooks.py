@@ -315,11 +315,13 @@ class _ContextProvider(Generic[_Type]):
         value: _Type,
         key: Key | None,
         type: Context[_Type],
+        priority: int = -1,
     ) -> None:
         self.children = children
         self.key = key
         self.type = type
         self.value = value
+        self.priority = priority
 
     def render(self) -> VdomDict:
         get_current_hook().set_context_provider(self)
