@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import datetime
 import hashlib
@@ -8,6 +9,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import Any, Callable
 from uuid import UUID
+from more_itertools import chunked
 
 import orjson
 import pyotp
@@ -137,7 +139,7 @@ class StateRecoverySerializer:
         at = self._totp.at
         return f"{at(target_time)}{at(target_time - self._otp_mixer)}{at(target_time + self._otp_mixer)}"
 
-    def serialize_state_vars(
+    async def serialize_state_vars(
         self, state_vars: dict[str, Any]
     ) -> dict[str, tuple[str, str, str]]:
         if len(state_vars) > self._max_num_state_objects:
@@ -146,30 +148,38 @@ class StateRecoverySerializer:
             )
             return {}
         result = {}
-        for key, value in state_vars.items():
-            result[key] = self._serialize(key, value)
+        for chunk in chunked(state_vars.items(), 20):
+            for key, value in chunk:
+                result[key] = self._serialize(key, value)
+            await asyncio.sleep(0)  # relinquish CPU
         return result
 
     def _serialize(self, key: str, obj: object) -> tuple[str, str, str]:
         if obj is None:
             return "0", "", ""
-        obj_type = type(obj)
-        if obj_type in (list, tuple):
-            if len(obj) != 0:
-                obj_type = type(obj[0])
-        for t in obj_type.__mro__:
-            type_id = self._object_to_type_id.get(t)
-            if type_id:
-                break
-        else:
-            raise ValueError(
-                f"Objects of type {obj_type} was not part of serializable_types"
-            )
-        result = self._serialize_object(obj)
-        if len(result) > self._max_object_length:
-            raise ValueError(
-                f"Serialized object {obj} is too long (length: {len(result)})"
-            )
+        match obj:
+            case True:
+                result = "true"
+            case False:
+                result = "false"
+            case _:
+                obj_type = type(obj)
+                if obj_type in (list, tuple):
+                    if len(obj) != 0:
+                        obj_type = type(obj[0])
+                for t in obj_type.__mro__:
+                    type_id = self._object_to_type_id.get(t)
+                    if type_id:
+                        break
+                else:
+                    raise ValueError(
+                        f"Objects of type {obj_type} was not part of serializable_types"
+                    )
+                result = self._serialize_object(obj)
+                if len(result) > self._max_object_length:
+                    raise ValueError(
+                        f"Serialized object {obj} is too long (length: {len(result)})"
+                    )
         signature = self._sign_serialization(key, type_id, result)
         return (
             type_id.decode("utf-8"),
