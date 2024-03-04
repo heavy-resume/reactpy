@@ -159,6 +159,8 @@ export class SimpleReactPyClient
   private isReconnecting: boolean;
   private isReady: boolean;
   private salt: string;
+  private shouldReconnect: boolean;
+  private lastReconnectAttempt: number;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
@@ -178,6 +180,8 @@ export class SimpleReactPyClient
     this.isReconnecting = false;
     this.isReady = false
     this.salt = "";
+    this.shouldReconnect = false;
+    this.lastReconnectAttempt = 0;
 
     this.onMessage(messageTypes.reconnectingCheck, () => { this.indicateReconnect() })
     this.onMessage(messageTypes.isReady, (msg) => { this.isReady = true; this.salt = msg.salt; });
@@ -236,27 +240,55 @@ export class SimpleReactPyClient
     }
   }
 
-  reconnect(onOpen?: () => void): void {
-    this.socket = createWebSocket({
-      readyPromise: this.ready,
-      url: this.urls.stream,
-      onOpen: onOpen,
-      onClose: () => {
-        this.isReconnecting = true;
-        this.isReady = false;
-        if (this.socketLoopIntervalId)
-          clearInterval(this.socketLoopIntervalId);
-        if (this.idleCheckIntervalId)
-          clearInterval(this.idleCheckIntervalId);
-        if (!this.sleeping) {
-          this.reconnect(onOpen);
-        }
-      },
-      onMessage: async ({ data }) => { this.lastMessageTime = Date.now(); this.handleIncoming(JSON.parse(data)) },
-      ...this.reconnectOptions,
-    });
-    this.socketLoopIntervalId = window.setInterval(() => { this.socketLoop() }, 30);
-    this.idleCheckIntervalId = window.setInterval(() => { this.idleTimeoutCheck() }, 10000);
+  reconnect(onOpen?: () => void, interval: number = 750, retriesRemaining: number = 30): void {
+    if (this.shouldReconnect) {
+      // already reconnecting
+      return;
+    }
+    this.shouldReconnect = true;
+
+    let lastSuccess = 0;
+    window.setTimeout(() => {
+
+      const intervalJitter = this.reconnectOptions?.intervalJitter || 1.1;
+      const backoffRate = this.reconnectOptions?.backoffRate || 1.1;
+      const maxInterval = this.reconnectOptions?.maxInterval || 20000;
+      const maxRetries = this.reconnectOptions?.maxRetries || retriesRemaining;
+
+      if (maxRetries > retriesRemaining)
+        retriesRemaining = maxRetries;
+
+      this.socket = createWebSocket({
+        readyPromise: this.ready,
+        url: this.urls.stream,
+        onOpen: () => {
+          lastSuccess = Date.now();
+          if (onOpen)
+            onOpen();
+        },
+        onClose: () => {
+          this.isReconnecting = true;
+          this.isReady = false;
+          if (this.socketLoopIntervalId)
+            clearInterval(this.socketLoopIntervalId);
+          if (this.idleCheckIntervalId)
+            clearInterval(this.idleCheckIntervalId);
+          if (!this.sleeping) {
+            const thisInterval = addJitter(interval, intervalJitter);
+            logger.log(
+              `reconnecting in ${(thisInterval / 1000).toPrecision(4)} seconds...`,
+            );
+            interval = nextInterval(interval, backoffRate, maxInterval);
+            this.reconnect(onOpen, interval, retriesRemaining - 1);
+          }
+        },
+        onMessage: async ({ data }) => { this.lastMessageTime = Date.now(); this.handleIncoming(JSON.parse(data)) },
+        ...this.reconnectOptions,
+      });
+      this.socketLoopIntervalId = window.setInterval(() => { this.socketLoop() }, 30);
+      this.idleCheckIntervalId = window.setInterval(() => { this.idleTimeoutCheck() }, 10000);
+
+    }, interval)
   }
 
   ensureConnected(): void {
@@ -341,10 +373,9 @@ function createWebSocket(
     socket.current.onclose = () => {
       if (!everConnected) {
         logger.log("failed to connect");
-        return;
+      } else {
+        logger.log("client disconnected");
       }
-
-      logger.log("client disconnected");
       if (props.onClose) {
         props.onClose();
       }
@@ -368,23 +399,23 @@ function createWebSocket(
   return socket;
 }
 
-// function nextInterval(
-//   currentInterval: number,
-//   backoffRate: number,
-//   maxInterval: number,
-// ): number {
-//   return Math.min(
-//     (currentInterval *
-//       // increase interval by backoff rate
-//       backoffRate),
-//     // don't exceed max interval
-//     maxInterval,
-//   );
-// }
+function nextInterval(
+  currentInterval: number,
+  backoffRate: number,
+  maxInterval: number,
+): number {
+  return Math.min(
+    (currentInterval *
+      // increase interval by backoff rate
+      backoffRate),
+    // don't exceed max interval
+    maxInterval,
+  );
+}
 
-// function addJitter(interval: number, jitter: number): number {
-//   return interval + (Math.random() * jitter * interval * 2 - jitter * interval);
-// }
+function addJitter(interval: number, jitter: number): number {
+  return interval + (Math.random() * jitter * interval * 2 - jitter * interval);
+}
 
 function rtrim(text: string, trim: string): string {
   return text.replace(new RegExp(`${trim}+$`), "");
