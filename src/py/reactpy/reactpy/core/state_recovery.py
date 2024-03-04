@@ -34,7 +34,7 @@ class StateRecoveryManager:
         otp_max_age: int = (48 * 60 * 60),
         # OTP code is actually three codes, in the past and future concatenated
         otp_mixer: float = (365 * 24 * 60 * 60 * 3),
-        max_num_state_objects: int = 256,
+        max_num_state_objects: int = 512,
         max_object_length: int = 40000,
         default_serializer: Callable[[Any], bytes] | None = None,
         deserializer_map: dict[type, Callable[[Any], Any]] | None = None,
