@@ -112,7 +112,11 @@ class Layout:
 
         self._rendering_queue: _ThreadSafeQueue[_LifeCycleStateId] = _ThreadSafeQueue()
         root_model_state = _new_root_model_state(
-            self.root, self._schedule_render_task, self.reconnecting, self.client_state, self._previous_states
+            self.root,
+            self._schedule_render_task,
+            self.reconnecting,
+            self.client_state,
+            self._previous_states,
         )
 
         self._root_life_cycle_state_id = root_id = root_model_state.life_cycle_state.id
@@ -242,6 +246,7 @@ class Layout:
             if self._state_recovery_serializer
             else {}
         )
+        new_state.life_cycle_state.hook._updated_states.clear()
         clear_hook_state(token)
         return LayoutUpdateMessage(
             type="layout-update",
