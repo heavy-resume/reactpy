@@ -45,6 +45,8 @@ from reactpy.core._life_cycle_hook import (
     create_hook_state,
     get_hook_state,
 )
+from reactpy.core.component import Component
+from reactpy.core.hooks import _ContextProvider
 from reactpy.core.state_recovery import StateRecoverySerializer
 from reactpy.core.types import (
     ComponentType,
@@ -90,9 +92,10 @@ class Layout:
         root: ComponentType,
     ) -> None:
         super().__init__()
-        if not isinstance(root, ComponentType):
-            msg = f"Expected a ComponentType, not {type(root)!r}."
-            raise TypeError(msg)
+        # slow
+        # if not isinstance(root, ComponentType):
+        #     msg = f"Expected a ComponentType, not {type(root)!r}."
+        #     raise TypeError(msg)
         self.root = root
         self.reconnecting = Ref(False)
         self._state_recovery_serializer = None
@@ -239,11 +242,7 @@ class Layout:
 
         updated_states = new_state.life_cycle_state.hook._updated_states
         state_vars = (
-            (
-                await self._state_recovery_serializer.serialize_state_vars(
-                    updated_states
-                )
-            )
+            (await self._state_recovery_serializer.serialize_state_vars(updated_states))
             if self._state_recovery_serializer
             else {}
         )
@@ -889,7 +888,7 @@ def _get_children_info(children: list[VdomChild]) -> Sequence[_ChildInfo]:
         elif isinstance(child, dict):
             child_type = _DICT_TYPE
             key = child.get("key")
-        elif isinstance(child, ComponentType):
+        elif isinstance(child, (Component, _ContextProvider)):
             child_type = _COMPONENT_TYPE
             key = child.key
         else:
