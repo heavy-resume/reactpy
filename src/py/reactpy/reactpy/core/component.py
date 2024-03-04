@@ -7,29 +7,32 @@ from typing import Any, Callable
 from reactpy.core.types import ComponentType, VdomDict
 
 
-def component(
-    function: Callable[..., ComponentType | VdomDict | str | None], priority: int = 0
-) -> Callable[..., Component]:
+def component(priority: int = 0) -> Callable[..., Component]:
     """A decorator for defining a new component.
 
     Parameters:
-        function: The component's :meth:`reactpy.core.proto.ComponentType.render` function.
         priority: The rendering priority. Lower numbers are higher priority.
     """
-    sig = inspect.signature(function)
 
-    if "key" in sig.parameters and sig.parameters["key"].kind in (
-        inspect.Parameter.KEYWORD_ONLY,
-        inspect.Parameter.POSITIONAL_OR_KEYWORD,
-    ):
-        msg = f"Component render function {function} uses reserved parameter 'key'"
-        raise TypeError(msg)
+    def _component(
+        function: Callable[..., ComponentType | VdomDict | str | None]
+    ) -> Callable[..., Component]:
+        sig = inspect.signature(function)
 
-    @wraps(function)
-    def constructor(*args: Any, key: Any | None = None, **kwargs: Any) -> Component:
-        return Component(function, key, args, kwargs, sig, priority)
+        if "key" in sig.parameters and sig.parameters["key"].kind in (
+            inspect.Parameter.KEYWORD_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        ):
+            msg = f"Component render function {function} uses reserved parameter 'key'"
+            raise TypeError(msg)
 
-    return constructor
+        @wraps(function)
+        def constructor(*args: Any, key: Any | None = None, **kwargs: Any) -> Component:
+            return Component(function, key, args, kwargs, sig, priority)
+
+        return constructor
+
+    return _component
 
 
 class Component:
