@@ -267,6 +267,10 @@ export class SimpleReactPyClient
             onOpen();
         },
         onClose: () => {
+          // reset retry interval
+          if (Date.now() - lastSuccess > maxInterval * 2) {
+            interval = 750;
+          }
           this.isReconnecting = true;
           this.isReady = false;
           if (this.socketLoopIntervalId)
