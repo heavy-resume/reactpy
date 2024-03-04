@@ -609,9 +609,7 @@ def _make_component_model_state(
     reconnecting: bool,
     client_state: dict[str, Any],
 ) -> _ModelState:
-    updated_states = (
-        parent.life_cycle_state or parent.parent_life_cycle_state
-    ).hook._updated_states
+    hook = (parent.life_cycle_state or parent.parent_life_cycle_state).hook
     return _ModelState(
         parent=parent,
         index=index,
@@ -625,7 +623,8 @@ def _make_component_model_state(
             schedule_render,
             reconnecting,
             client_state,
-            updated_states,
+            hook._updated_states,
+            hook._previous_states,
         ),
     )
 
@@ -658,6 +657,7 @@ def _update_component_model_state(
     reconnecting: bool,
     client_state: dict[str, Any],
 ) -> _ModelState:
+    hook = (new_parent.life_cycle_state or new_parent.parent_life_cycle_state).hook
     return _ModelState(
         parent=new_parent,
         index=new_index,
@@ -674,9 +674,8 @@ def _update_component_model_state(
                 schedule_render,
                 reconnecting,
                 client_state,
-                (
-                    new_parent.life_cycle_state or new_parent.parent_life_cycle_state
-                ).hook._updated_states,
+                hook._updated_states,
+                hook._previous_states,
             )
         ),
     )

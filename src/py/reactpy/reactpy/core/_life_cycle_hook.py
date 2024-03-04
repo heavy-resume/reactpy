@@ -139,6 +139,7 @@ class LifeCycleHook:
         "reconnecting",
         "client_state",
         "_updated_states",
+        "_previous_states",
     )
 
     component: ComponentType
@@ -149,6 +150,7 @@ class LifeCycleHook:
         reconnecting: Ref,
         client_state: dict[str, Any],
         updated_states: dict[str, Any],
+        previous_states: dict[str, Any],
     ) -> None:
         self._context_providers: dict[Context[Any], ContextProviderType[Any]] = {}
         self._schedule_render_callback = schedule_render
@@ -163,9 +165,13 @@ class LifeCycleHook:
         self.reconnecting = reconnecting
         self.client_state = client_state or {}
         self._updated_states = updated_states
+        self._previous_states = previous_states
 
     def add_state_update(self, updated_state: _CurrentState | Ref) -> None:
-        if updated_state.key:
+        if (
+            updated_state.key
+            and self._previous_states[updated_state.key] != updated_state.value
+        ):
             self._updated_states[updated_state.key] = updated_state.value
 
     def schedule_render(self) -> None:
