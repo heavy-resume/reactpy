@@ -160,7 +160,6 @@ export class SimpleReactPyClient
   private isReady: boolean;
   private salt: string;
   private shouldReconnect: boolean;
-  private lastReconnectAttempt: number;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
