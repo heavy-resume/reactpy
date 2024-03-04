@@ -231,8 +231,11 @@ class Layout:
             validate_vdom_json(new_state.model.current)
 
         state_vars = (
-            self._state_recovery_serializer.serialize_state_vars(
-                new_state.life_cycle_state.hook._updated_states
+
+            (
+                await self._state_recovery_serializer.serialize_state_vars(
+                    new_state.life_cycle_state.hook._updated_states
+                )
             )
             if self._state_recovery_serializer
             else {}
