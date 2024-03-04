@@ -155,7 +155,7 @@ class StateRecoverySerializer:
         return result
 
     def _serialize(self, key: str, obj: object) -> tuple[str, str, str]:
-        type_id = "1"  # bool
+        type_id = b"1"  # bool
         if obj is None:
             return "0", "", ""
         match obj:
