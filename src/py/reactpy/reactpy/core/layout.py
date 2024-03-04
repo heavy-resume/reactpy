@@ -112,7 +112,7 @@ class Layout:
 
         self._rendering_queue: _ThreadSafeQueue[_LifeCycleStateId] = _ThreadSafeQueue()
         root_model_state = _new_root_model_state(
-            self.root, self._schedule_render_task, self.reconnecting, self.client_state
+            self.root, self._schedule_render_task, self.reconnecting, self.client_state, self._previous_states
         )
 
         self._root_life_cycle_state_id = root_id = root_model_state.life_cycle_state.id
@@ -587,6 +587,7 @@ def _new_root_model_state(
     schedule_render: Callable[[_LifeCycleStateId], None],
     reconnecting: bool,
     client_state: dict[str, Any],
+    previous_states: dict[str, Any],
 ) -> _ModelState:
     return _ModelState(
         parent=None,
@@ -597,7 +598,7 @@ def _new_root_model_state(
         children_by_key={},
         targets_by_event={},
         life_cycle_state=_make_life_cycle_state(
-            component, schedule_render, reconnecting, client_state, {}, self._previous_states
+            component, schedule_render, reconnecting, client_state, {}, previous_states
         ),
     )
 
