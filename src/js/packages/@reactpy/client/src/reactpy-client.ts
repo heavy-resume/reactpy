@@ -260,6 +260,7 @@ export class SimpleReactPyClient
         retriesRemaining = maxRetries;
 
       this.socket = createWebSocket({
+        connectionTimeout: this.connectionTimeout,
         readyPromise: this.ready,
         url: this.urls.stream,
         onOpen: () => {
