@@ -595,7 +595,7 @@ def _new_root_model_state(
         children_by_key={},
         targets_by_event={},
         life_cycle_state=_make_life_cycle_state(
-            component, schedule_render, reconnecting, client_state, {}
+            component, schedule_render, reconnecting, client_state, {}, {}
         ),
     )
 
@@ -802,6 +802,7 @@ def _make_life_cycle_state(
     reconnecting: bool,
     client_state: dict[str, Any],
     updated_states: dict[str, Any],
+    previous_states: dict[str, Any],
 ) -> _LifeCycleState:
     life_cycle_state_id = _LifeCycleStateId(uuid4().hex)
     return _LifeCycleState(
@@ -811,6 +812,7 @@ def _make_life_cycle_state(
             reconnecting=reconnecting,
             client_state=client_state,
             updated_states=updated_states,
+            previous_states=previous_states,
         ),
         component,
     )
