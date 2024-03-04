@@ -57,6 +57,7 @@ class ComponentType(Protocol):
 
     This is used to see if two component instances share the same definition.
     """
+    priority: int
 
     def render(self) -> VdomDict | ComponentType | str | None:
         """Render the component's view model."""

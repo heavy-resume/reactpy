@@ -6,6 +6,7 @@ import copy
 from asyncio import (
     FIRST_COMPLETED,
     CancelledError,
+    PriorityQueue,
     Queue,
     Task,
     create_task,
@@ -231,7 +232,6 @@ class Layout:
             validate_vdom_json(new_state.model.current)
 
         state_vars = (
-
             (
                 await self._state_recovery_serializer.serialize_state_vars(
                     new_state.life_cycle_state.hook._updated_states
@@ -559,9 +559,11 @@ class Layout:
 
             to_unmount.extend(model_state.children_by_key.values())
 
-    def _schedule_render_task(self, lcs_id: _LifeCycleStateId) -> None:
+    def _schedule_render_task(
+        self, lcs_id: _LifeCycleStateId, priority: int = 0
+    ) -> None:
         if not REACTPY_ASYNC_RENDERING.current:
-            self._rendering_queue.put(lcs_id)
+            self._rendering_queue.put(lcs_id, priority)
             return None
         try:
             model_state = self._model_states_by_life_cycle_state_id[lcs_id]
@@ -603,7 +605,7 @@ def _make_component_model_state(
     index: int,
     key: Any,
     component: ComponentType,
-    schedule_render: Callable[[_LifeCycleStateId], None],
+    schedule_render: Callable[[_LifeCycleStateId, int], None],
     reconnecting: bool,
     client_state: dict[str, Any],
 ) -> _ModelState:
@@ -652,7 +654,7 @@ def _update_component_model_state(
     new_parent: _ModelState,
     new_index: int,
     new_component: ComponentType,
-    schedule_render: Callable[[_LifeCycleStateId], None],
+    schedule_render: Callable[[_LifeCycleStateId, int], None],
     reconnecting: bool,
     client_state: dict[str, Any],
 ) -> _ModelState:
@@ -797,7 +799,7 @@ class _ModelState:
 
 def _make_life_cycle_state(
     component: ComponentType,
-    schedule_render: Callable[[_LifeCycleStateId], None],
+    schedule_render: Callable[[_LifeCycleStateId, int], None],
     reconnecting: bool,
     client_state: dict[str, Any],
     updated_states: dict[str, Any],
@@ -806,7 +808,7 @@ def _make_life_cycle_state(
     return _LifeCycleState(
         life_cycle_state_id,
         LifeCycleHook(
-            lambda: schedule_render(life_cycle_state_id),
+            lambda: schedule_render(life_cycle_state_id, component.priority),
             reconnecting=reconnecting,
             client_state=client_state,
             updated_states=updated_states,
@@ -849,21 +851,21 @@ _Type = TypeVar("_Type")
 class _ThreadSafeQueue(Generic[_Type]):
     def __init__(self) -> None:
         self._loop = get_running_loop()
-        self._queue: Queue[_Type] = Queue()
+        self._queue: PriorityQueue[_Type] = PriorityQueue()
         self._pending: set[_Type] = set()
 
-    def put(self, value: _Type) -> None:
+    def put(self, value: _Type, priority: int = 0) -> None:
         if value not in self._pending:
             self._pending.add(value)
-            self._loop.call_soon_threadsafe(self._queue.put_nowait, value)
+            self._loop.call_soon_threadsafe(self._queue.put_nowait, (priority, value))
 
     async def get(self) -> _Type:
-        value = await self._queue.get()
+        priority, value = await self._queue.get()
         self._pending.remove(value)
         return value
 
     async def get_nowait(self) -> _Type:
-        value = self._queue.get_nowait()
+        priority, value = self._queue.get_nowait()
         self._pending.remove(value)
         return value
 

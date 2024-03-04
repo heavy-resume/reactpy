@@ -8,12 +8,13 @@ from reactpy.core.types import ComponentType, VdomDict
 
 
 def component(
-    function: Callable[..., ComponentType | VdomDict | str | None]
+    function: Callable[..., ComponentType | VdomDict | str | None], priority: int = 0
 ) -> Callable[..., Component]:
     """A decorator for defining a new component.
 
     Parameters:
         function: The component's :meth:`reactpy.core.proto.ComponentType.render` function.
+        priority: The rendering priority. Lower numbers are higher priority.
     """
     sig = inspect.signature(function)
 
@@ -26,7 +27,7 @@ def component(
 
     @wraps(function)
     def constructor(*args: Any, key: Any | None = None, **kwargs: Any) -> Component:
-        return Component(function, key, args, kwargs, sig)
+        return Component(function, key, args, kwargs, sig, priority)
 
     return constructor
 
@@ -43,12 +44,14 @@ class Component:
         args: tuple[Any, ...],
         kwargs: dict[str, Any],
         sig: inspect.Signature,
+        priority: int = 0,
     ) -> None:
         self.key = key
         self.type = function
         self._args = args
         self._kwargs = kwargs
         self._sig = sig
+        self.priority = priority
 
     def render(self) -> ComponentType | VdomDict | str | None:
         return self.type(*self._args, **self._kwargs)
