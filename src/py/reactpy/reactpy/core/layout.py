@@ -237,16 +237,18 @@ class Layout:
         if REACTPY_CHECK_VDOM_SPEC.current:
             validate_vdom_json(new_state.model.current)
 
+        updated_states = new_state.life_cycle_state.hook._updated_states
         state_vars = (
             (
                 await self._state_recovery_serializer.serialize_state_vars(
-                    new_state.life_cycle_state.hook._updated_states
+                    updated_states
                 )
             )
             if self._state_recovery_serializer
             else {}
         )
-        new_state.life_cycle_state.hook._updated_states.clear()
+        self._previous_states.update(updated_states)
+        updated_states.clear()
         clear_hook_state(token)
         return LayoutUpdateMessage(
             type="layout-update",
