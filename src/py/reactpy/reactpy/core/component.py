@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 from functools import wraps
-from typing import Any, Callable, TypeVar, ParamSpec
+from typing import Any, Callable, ParamSpec, TypeVar
 
 from reactpy.core.types import ComponentType, VdomDict
 
@@ -11,7 +11,9 @@ P = ParamSpec("P")
 
 
 def component(
-    function: Callable[P, T],
+    function: Callable[P, T] | None = None,
+    *,
+    priority: int = 0,
 ) -> Callable[P, Component]:
     """A decorator for defining a new component.
 
@@ -19,9 +21,7 @@ def component(
         priority: The rendering priority. Lower numbers are higher priority.
     """
 
-    def _component(
-        function: Callable[..., ComponentType | VdomDict | str | None]
-    ) -> Callable[..., Component]:
+    def _component(function: Callable[P, T]) -> Callable[P, Component]:
         sig = inspect.signature(function)
 
         if "key" in sig.parameters and sig.parameters["key"].kind in (
@@ -32,7 +32,9 @@ def component(
             raise TypeError(msg)
 
         @wraps(function)
-        def constructor(*args: P.args, key: Any | None = None, **kwargs: P.kwargs) -> Component:
+        def constructor(
+            *args: P.args, key: Any | None = None, **kwargs: P.kwargs
+        ) -> Component:
             return Component(function, key, args, kwargs, sig, priority)
 
         return constructor
