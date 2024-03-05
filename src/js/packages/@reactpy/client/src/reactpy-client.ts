@@ -166,7 +166,7 @@ export class SimpleReactPyClient
   private connectionTimeout: number;
   private reconnectingCallback: Function;
   private reconnectedCallback: Function;
-  private showingGrayout: boolean;
+  private didReconnectingCallback: boolean;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
@@ -188,7 +188,7 @@ export class SimpleReactPyClient
     this.isReady = false
     this.salt = "";
     this.shouldReconnect = false;
-    this.showingGrayout = false;
+    this.didReconnectingCallback = false;
     this.reconnectingCallback = props.reconnectOptions?.reconnectingCallback || this.showReconnectingGrayout;
     this.reconnectedCallback = props.reconnectOptions?.reconnectedCallback || this.hideReconnectingGrayout;
 
@@ -210,9 +210,6 @@ export class SimpleReactPyClient
   }
 
   showReconnectingGrayout() {
-    if (this.showingGrayout)
-      return
-    this.showingGrayout = true;
     // Create the overlay
     const overlay = document.createElement('div');
     overlay.id = 'reactpy-reconnect-overlay';
@@ -251,6 +248,7 @@ export class SimpleReactPyClient
       color: #FFF;
       display: inline-block;
       width: 100%;
+      height: 100%;
       text-align: center;
       transform-origin: center;
     `;
@@ -270,7 +268,6 @@ export class SimpleReactPyClient
   }
 
   hideReconnectingGrayout() {
-    this.showingGrayout = false;
     const overlay = document.getElementById('reactpy-reconnect-overlay');
     if (overlay && overlay.parentNode) {
       overlay.parentNode.removeChild(overlay);
@@ -348,8 +345,10 @@ export class SimpleReactPyClient
     this.shouldReconnect = true;
 
     window.setTimeout(() => {
-      if (this.reconnectingCallback)
-        this.reconnectingCallback()
+      if (!this.didReconnectingCallback && this.reconnectingCallback) {
+        this.didReconnectingCallback = true;
+        this.reconnectingCallback();
+      }
 
       if (maxRetries < connectionAttemptsRemaining)
         connectionAttemptsRemaining = maxRetries;
@@ -360,8 +359,10 @@ export class SimpleReactPyClient
         url: this.urls.stream,
         onOpen: () => {
           lastAttempt = Date.now();
-          if (this.reconnectedCallback)
-            this.reconnectedCallback()
+          if (this.reconnectedCallback) {
+            this.reconnectedCallback();
+            this.didReconnectingCallback = false;
+          }
           if (onOpen)
             onOpen();
         },
