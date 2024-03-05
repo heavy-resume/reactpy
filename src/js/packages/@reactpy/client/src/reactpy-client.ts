@@ -300,7 +300,7 @@ export class SimpleReactPyClient
           if (!this.sleeping) {
             const thisInterval = nextInterval(addJitter(interval, intervalJitter), backoffRate, maxInterval);
             logger.log(
-              `reconnecting in ${(thisInterval / 1000).toPrecision(4)} seconds...`,
+              `reconnecting in ${(thisInterval / 1000).toPrecision(4)} seconds... (${retriesRemaining} retries remaining)`,
             );
             this.reconnect(onOpen, thisInterval, retriesRemaining - 1, lastAttempt);
           }
