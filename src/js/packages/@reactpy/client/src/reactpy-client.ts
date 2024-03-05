@@ -300,10 +300,11 @@ export class SimpleReactPyClient
             clearInterval(this.idleCheckIntervalId);
           if (!this.sleeping) {
             const thisInterval = nextInterval(addJitter(interval, intervalJitter), backoffRate, maxInterval);
+            const newRetriesRemaining = retriesRemaining - 1;
             logger.log(
-              `reconnecting in ${(thisInterval / 1000).toPrecision(4)} seconds... (${retriesRemaining} retries remaining)`,
+              `reconnecting in ${(thisInterval / 1000).toPrecision(4)} seconds... (${newRetriesRemaining} retries remaining)`,
             );
-            this.reconnect(onOpen, thisInterval, retriesRemaining - 1, lastAttempt);
+            this.reconnect(onOpen, thisInterval, newRetriesRemaining, lastAttempt);
           }
         },
         onMessage: async ({ data }) => { this.lastMessageTime = Date.now(); this.handleIncoming(JSON.parse(data)) },
