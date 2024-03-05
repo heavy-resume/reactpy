@@ -42,11 +42,13 @@ export abstract class BaseReactPyClient implements ReactPyClient {
   protected readonly ready: Promise<void>;
   private resolveReady: (value: undefined) => void;
   protected stateVars: object;
+  protected debugMessages: boolean;
 
   constructor() {
     this.resolveReady = () => { };
     this.ready = new Promise((resolve) => (this.resolveReady = resolve));
     this.stateVars = {};
+    this.debugMessages = false;
   }
 
   onMessage(type: string, handler: (message: any) => void): () => void {
@@ -77,7 +79,9 @@ export abstract class BaseReactPyClient implements ReactPyClient {
       return;
     }
 
-    logger.log("Got message", message);
+    if (this.debugMessages) {
+      logger.log("Got message", message);
+    }
 
     const messageHandlers: ((m: any) => void)[] | undefined =
       this.handlers[message.type];
@@ -93,9 +97,9 @@ export abstract class BaseReactPyClient implements ReactPyClient {
 export type SimpleReactPyClientProps = {
   serverLocation?: LocationProps;
   reconnectOptions?: ReconnectProps;
-  forceRerender?: boolean;
   idleDisconnectTimeSeconds?: number;
   connectionTimeout?: number;
+  debugMessages?: boolean;
 };
 
 /**
@@ -153,8 +157,6 @@ export class SimpleReactPyClient
   private idleDisconnectTimeMillis: number;
   private lastMessageTime: number;
   private reconnectOptions: ReconnectProps | undefined;
-  // @ts-ignore
-  private forceRerender: boolean;
   private messageQueue: any[] = [];
   private socketLoopIntervalId?: number | null;
   private idleCheckIntervalId?: number | null;
@@ -179,10 +181,10 @@ export class SimpleReactPyClient
       },
     );
     this.idleDisconnectTimeMillis = (props.idleDisconnectTimeSeconds || 240) * 1000;
-    this.forceRerender = props.forceRerender !== undefined ? props.forceRerender : false;
     this.connectionTimeout = props.connectionTimeout || 5000;
     this.lastMessageTime = Date.now()
     this.reconnectOptions = props.reconnectOptions
+    this.debugMessages = props.debugMessages || false;
     this.sleeping = false;
     this.isReconnecting = false;
     this.isReady = false
@@ -210,16 +212,13 @@ export class SimpleReactPyClient
   }
 
   showReconnectingGrayout() {
-    // Create the overlay
     const overlay = document.createElement('div');
     overlay.id = 'reactpy-reconnect-overlay';
 
-    // Create the pipe symbol
     const pipeContainer = document.createElement('div');
     const pipeSymbol = document.createElement('div');
     pipeSymbol.textContent = '|'; // Set the pipe symbol
 
-    // Style the overlay
     overlay.style.cssText = `
       position: fixed;
       top: 0;
@@ -233,7 +232,6 @@ export class SimpleReactPyClient
       z-index: 1000;
     `;
 
-    // Style the pipe container (if needed)
     pipeContainer.style.cssText = `
       display: flex;
       justify-content: center;
@@ -242,7 +240,6 @@ export class SimpleReactPyClient
       height: 40px;
     `;
 
-    // Style the pipe symbol
     pipeSymbol.style.cssText = `
       font-size: 24px;
       color: #FFF;
@@ -306,7 +303,9 @@ export class SimpleReactPyClient
 
   transmitMessage(message: any): void {
     if (this.socket && this.socket.current) {
-      logger.log("Sending message", message);
+      if (this.debugMessages) {
+        logger.log("Sending message", message);
+      }
       this.socket.current.send(JSON.stringify(message));
     }
   }
@@ -449,16 +448,6 @@ function createWebSocket(
     onClose?: () => void;
   },
 ) {
-  // const {
-  //   maxInterval = 60000,
-  //   maxRetries = 50,
-  //   backoffRate = 1.1,
-  //   intervalJitter = 0.1,
-  // } = props;
-
-  // const startInterval = 750;
-  // let retries = 0;
-  // let interval = startInterval;
   const closed = false;
   let everConnected = false;
   const socket: { current?: WebSocket } = {};
@@ -471,7 +460,6 @@ function createWebSocket(
     const connectionTimeout = props.connectionTimeout; // Timeout in milliseconds
 
     const timeoutId = setTimeout(() => {
-      // If the socket is still not open, close it to trigger the onerror event
       if (socket.current && socket.current.readyState !== WebSocket.OPEN) {
         socket.current.close();
         console.error('Connection attempt timed out');
@@ -481,8 +469,6 @@ function createWebSocket(
       clearTimeout(timeoutId);
       everConnected = true;
       logger.log("client connected");
-      // interval = startInterval;
-      // retries = 0;
       if (props.onOpen) {
         props.onOpen();
       }
@@ -497,18 +483,6 @@ function createWebSocket(
       if (props.onClose) {
         props.onClose();
       }
-
-      //   if (retries >= maxRetries) {
-      //     return;
-      //   }
-
-      //   const thisInterval = addJitter(interval, intervalJitter);
-      //   logger.log(
-      //     `reconnecting in ${(thisInterval / 1000).toPrecision(4)} seconds...`,
-      //   );
-      //   setTimeout(connect, thisInterval);
-      //   interval = nextInterval(interval, backoffRate, maxInterval);
-      //   retries++;
     };
   };
 
