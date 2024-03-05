@@ -258,12 +258,6 @@ export class SimpleReactPyClient
     overlay.appendChild(pipeContainer);
     document.body.appendChild(overlay);
 
-    // Append the pipeSymbol to the overlay
-    overlay.appendChild(pipeSymbol);
-
-    // Append the overlay to the body
-    document.body.appendChild(overlay);
-
     // Create and start the spin animation
     let angle = 0;
     function spin() {
