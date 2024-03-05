@@ -260,6 +260,7 @@ export class SimpleReactPyClient
     if (retriesRemaining <= 0) {
       logger.warn("Giving up on reconnecting (hit retry limit)");
       this.shouldReconnect = false;
+      this.isReconnecting = false;
       return
     }
 
