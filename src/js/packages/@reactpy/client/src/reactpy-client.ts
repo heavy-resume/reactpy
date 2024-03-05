@@ -190,6 +190,15 @@ export class SimpleReactPyClient
     this.onMessage(messageTypes.stateUpdate, (msg) => { this.updateClientState(msg.state_vars) });
 
     this.reconnect()
+
+    const reconnectOnUserAction = (ev: any) => {
+      if (!this.isReady && !this.isReconnecting) {
+        this.reconnect();
+      }
+    }
+
+    window.addEventListener('mousemove', reconnectOnUserAction);
+    window.addEventListener('scroll', reconnectOnUserAction);
   }
 
   indicateReconnect(): void {
