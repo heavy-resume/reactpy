@@ -237,7 +237,7 @@ export class SimpleReactPyClient
 
     // Style the pipe container (if needed)
     pipeContainer.style.cssText = `
-      display: flex;
+      display: block;
       justify-content: center;
       align-items: center;
       width: 40px;
