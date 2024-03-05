@@ -166,6 +166,7 @@ export class SimpleReactPyClient
   private connectionTimeout: number;
   private reconnectingCallback: Function;
   private reconnectedCallback: Function;
+  private showingGrayout: boolean;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
@@ -187,6 +188,7 @@ export class SimpleReactPyClient
     this.isReady = false
     this.salt = "";
     this.shouldReconnect = false;
+    this.showingGrayout = false;
     this.reconnectingCallback = props.reconnectOptions?.reconnectingCallback || this.showReconnectingGrayout;
     this.reconnectedCallback = props.reconnectOptions?.reconnectedCallback || this.hideReconnectingGrayout;
 
@@ -208,33 +210,53 @@ export class SimpleReactPyClient
   }
 
   showReconnectingGrayout() {
+    if (this.showingGrayout)
+      return
     // Create the overlay
     const overlay = document.createElement('div');
     overlay.id = 'reactpy-reconnect-overlay';
 
-    Object.assign(overlay.style, {
-      position: 'fixed',
-      top: '0',
-      left: '0',
-      width: '100%',
-      height: '100%',
-      backgroundColor: 'rgba(0,0,0,0.5)', // Transparent gray
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: '100000' // Ensure it's above other content
-    });
-
     // Create the pipe symbol
+    const pipeContainer = document.createElement('div');
     const pipeSymbol = document.createElement('div');
     pipeSymbol.textContent = '|'; // Set the pipe symbol
 
+    // Style the overlay
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    `;
+
+    // Style the pipe container (if needed)
+    pipeContainer.style.cssText = `
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 40px;
+      height: 40px;
+    `;
+
     // Style the pipe symbol
-    Object.assign(pipeSymbol.style, {
-      fontSize: '24px',
-      color: '#FFF', // White color for visibility
-      textAlign: 'center' // Ensure text is centered
-    });
+    pipeSymbol.style.cssText = `
+      font-size: 24px;
+      color: #FFF;
+      display: inline-block;
+      width: 100%;
+      text-align: center;
+      transform-origin: center;
+    `;
+
+    pipeContainer.appendChild(pipeSymbol);
+    overlay.appendChild(pipeContainer);
+    document.body.appendChild(overlay);
 
     // Append the pipeSymbol to the overlay
     overlay.appendChild(pipeSymbol);
@@ -253,6 +275,7 @@ export class SimpleReactPyClient
   }
 
   hideReconnectingGrayout() {
+    this.showingGrayout = false;
     const overlay = document.getElementById('reactpy-reconnect-overlay');
     if (overlay && overlay.parentNode) {
       overlay.parentNode.removeChild(overlay);
