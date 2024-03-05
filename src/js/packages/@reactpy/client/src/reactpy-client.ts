@@ -254,7 +254,7 @@ export class SimpleReactPyClient
     const intervalJitter = this.reconnectOptions?.intervalJitter || 0.5;
     const backoffRate = this.reconnectOptions?.backoffRate || 1.2;
     const maxInterval = this.reconnectOptions?.maxInterval || 20000;
-    const maxRetries = this.reconnectOptions?.maxRetries || connectionAttemptsRemaining;
+    const maxRetries = this.reconnectOptions?.maxRetries || 20;
 
 
     if (connectionAttemptsRemaining <= 0) {
@@ -273,8 +273,8 @@ export class SimpleReactPyClient
 
     window.setTimeout(() => {
 
-      if (maxRetries > connectionAttemptsRemaining)
-      connectionAttemptsRemaining = maxRetries;
+      if (maxRetries < connectionAttemptsRemaining)
+        connectionAttemptsRemaining = maxRetries;
 
       this.socket = createWebSocket({
         connectionTimeout: this.connectionTimeout,
