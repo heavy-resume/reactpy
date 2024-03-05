@@ -212,6 +212,7 @@ export class SimpleReactPyClient
   showReconnectingGrayout() {
     if (this.showingGrayout)
       return
+    this.showingGrayout = true;
     // Create the overlay
     const overlay = document.createElement('div');
     overlay.id = 'reactpy-reconnect-overlay';
