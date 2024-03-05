@@ -134,6 +134,8 @@ type ReconnectProps = {
   maxRetries?: number;
   backoffRate?: number;
   intervalJitter?: number;
+  reconnectingCallback?: Function;
+  reconnectedCallback?: Function;
 };
 
 enum messageTypes {
@@ -162,6 +164,8 @@ export class SimpleReactPyClient
   private salt: string;
   private shouldReconnect: boolean;
   private connectionTimeout: number;
+  private reconnectingCallback: Function;
+  private reconnectedCallback: Function;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
@@ -183,6 +187,8 @@ export class SimpleReactPyClient
     this.isReady = false
     this.salt = "";
     this.shouldReconnect = false;
+    this.reconnectingCallback = props.reconnectOptions?.reconnectingCallback || this.showReconnectingGrayout;
+    this.reconnectedCallback = props.reconnectOptions?.reconnectedCallback || this.hideReconnectingGrayout;
 
     this.onMessage(messageTypes.reconnectingCheck, () => { this.indicateReconnect() })
     this.onMessage(messageTypes.isReady, (msg) => { this.isReady = true; this.salt = msg.salt; });
@@ -199,6 +205,58 @@ export class SimpleReactPyClient
 
     window.addEventListener('mousemove', reconnectOnUserAction);
     window.addEventListener('scroll', reconnectOnUserAction);
+  }
+
+  showReconnectingGrayout() {
+    // Create the overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'reactpy-reconnect-overlay';
+
+    Object.assign(overlay.style, {
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0,0,0,0.5)', // Transparent gray
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: '100000' // Ensure it's above other content
+    });
+
+    // Create the pipe symbol
+    const pipeSymbol = document.createElement('div');
+    pipeSymbol.textContent = '|'; // Set the pipe symbol
+
+    // Style the pipe symbol
+    Object.assign(pipeSymbol.style, {
+      fontSize: '24px',
+      color: '#FFF', // White color for visibility
+      textAlign: 'center' // Ensure text is centered
+    });
+
+    // Append the pipeSymbol to the overlay
+    overlay.appendChild(pipeSymbol);
+
+    // Append the overlay to the body
+    document.body.appendChild(overlay);
+
+    // Create and start the spin animation
+    let angle = 0;
+    function spin() {
+      angle = (angle + 2) % 360; // Adjust rotation speed as needed
+      pipeSymbol.style.transform = `rotate(${angle}deg)`;
+      requestAnimationFrame(spin);
+    }
+    spin();
+  }
+
+  hideReconnectingGrayout() {
+    const overlay = document.getElementById('reactpy-reconnect-overlay');
+    if (overlay && overlay.parentNode) {
+      overlay.parentNode.removeChild(overlay);
+    }
   }
 
   indicateReconnect(): void {
@@ -272,6 +330,8 @@ export class SimpleReactPyClient
     this.shouldReconnect = true;
 
     window.setTimeout(() => {
+      if (this.reconnectingCallback)
+        this.reconnectingCallback()
 
       if (maxRetries < connectionAttemptsRemaining)
         connectionAttemptsRemaining = maxRetries;
@@ -282,6 +342,8 @@ export class SimpleReactPyClient
         url: this.urls.stream,
         onOpen: () => {
           lastAttempt = Date.now();
+          if (this.reconnectedCallback)
+            this.reconnectedCallback()
           if (onOpen)
             onOpen();
         },
