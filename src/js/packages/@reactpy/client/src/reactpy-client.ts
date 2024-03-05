@@ -250,7 +250,7 @@ export class SimpleReactPyClient
     }
   }
 
-  reconnect(onOpen?: () => void, interval: number = 750, retriesRemaining: number = 30, lastAttempt: number = 0): void {
+  reconnect(onOpen?: () => void, interval: number = 750, retriesRemaining: number = 2, lastAttempt: number = 0): void {
     const intervalJitter = this.reconnectOptions?.intervalJitter || 0.5;
     const backoffRate = this.reconnectOptions?.backoffRate || 1.2;
     const maxInterval = this.reconnectOptions?.maxInterval || 20000;
@@ -258,6 +258,7 @@ export class SimpleReactPyClient
 
 
     if (retriesRemaining <= 0) {
+      logger.warn("Giving up on reconnecting (hit retry limit)");
       this.shouldReconnect = false;
       return
     }
