@@ -451,7 +451,7 @@ function nextInterval(
 }
 
 function addJitter(interval: number, jitter: number): number {
-  return interval + (Math.random() * jitter * interval * 2 - jitter * interval);
+  return interval + (Math.random() * jitter * interval);
 }
 
 function rtrim(text: string, trim: string): string {
