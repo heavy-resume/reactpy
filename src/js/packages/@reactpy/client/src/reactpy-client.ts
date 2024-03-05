@@ -241,11 +241,12 @@ export class SimpleReactPyClient
     }
   }
 
-  reconnect(onOpen?: () => void, interval: number = 750, retriesRemaining: number = 30): void {
+  reconnect(onOpen?: () => void, interval: number = 750, retriesRemaining: number = 30, lastSuccess: number = 0): void {
     const intervalJitter = this.reconnectOptions?.intervalJitter || 0.5;
     const backoffRate = this.reconnectOptions?.backoffRate || 1.2;
     const maxInterval = this.reconnectOptions?.maxInterval || 20000;
     const maxRetries = this.reconnectOptions?.maxRetries || retriesRemaining;
+
 
     if (retriesRemaining <= 0) {
       this.shouldReconnect = false;
@@ -256,9 +257,9 @@ export class SimpleReactPyClient
       // already reconnecting
       return;
     }
+    lastSuccess = lastSuccess || Date.now();
     this.shouldReconnect = true;
 
-    let lastSuccess = 0;
     window.setTimeout(() => {
 
       if (maxRetries > retriesRemaining)
@@ -277,6 +278,7 @@ export class SimpleReactPyClient
           // reset retry interval
           if (Date.now() - lastSuccess > maxInterval * 2) {
             interval = 750;
+            lastSuccess = Date.now()
           }
           this.shouldReconnect = false;
           this.isReconnecting = true;
@@ -286,11 +288,11 @@ export class SimpleReactPyClient
           if (this.idleCheckIntervalId)
             clearInterval(this.idleCheckIntervalId);
           if (!this.sleeping) {
-            const thisInterval = addJitter(interval, intervalJitter);
+            const thisInterval = nextInterval(addJitter(interval, intervalJitter), backoffRate, maxInterval);
             logger.log(
               `reconnecting in ${(thisInterval / 1000).toPrecision(4)} seconds...`,
             );
-            this.reconnect(onOpen, nextInterval(interval, backoffRate, maxInterval), retriesRemaining - 1);
+            this.reconnect(onOpen, thisInterval, retriesRemaining - 1, lastSuccess);
           }
         },
         onMessage: async ({ data }) => { this.lastMessageTime = Date.now(); this.handleIncoming(JSON.parse(data)) },
