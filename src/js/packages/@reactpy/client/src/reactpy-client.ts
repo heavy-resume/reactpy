@@ -250,14 +250,14 @@ export class SimpleReactPyClient
     }
   }
 
-  reconnect(onOpen?: () => void, interval: number = 750, retriesRemaining: number = 2, lastAttempt: number = 0): void {
+  reconnect(onOpen?: () => void, interval: number = 750, connectionAttemptsRemaining: number = 20, lastAttempt: number = 0): void {
     const intervalJitter = this.reconnectOptions?.intervalJitter || 0.5;
     const backoffRate = this.reconnectOptions?.backoffRate || 1.2;
     const maxInterval = this.reconnectOptions?.maxInterval || 20000;
-    const maxRetries = this.reconnectOptions?.maxRetries || retriesRemaining;
+    const maxRetries = this.reconnectOptions?.maxRetries || connectionAttemptsRemaining;
 
 
-    if (retriesRemaining <= 0) {
+    if (connectionAttemptsRemaining <= 0) {
       logger.warn("Giving up on reconnecting (hit retry limit)");
       this.shouldReconnect = false;
       this.isReconnecting = false;
@@ -273,8 +273,8 @@ export class SimpleReactPyClient
 
     window.setTimeout(() => {
 
-      if (maxRetries > retriesRemaining)
-        retriesRemaining = maxRetries;
+      if (maxRetries > connectionAttemptsRemaining)
+      connectionAttemptsRemaining = maxRetries;
 
       this.socket = createWebSocket({
         connectionTimeout: this.connectionTimeout,
@@ -289,7 +289,7 @@ export class SimpleReactPyClient
           // reset retry interval
           if (Date.now() - lastAttempt > maxInterval * 2) {
             interval = 750;
-            retriesRemaining = maxRetries;
+            connectionAttemptsRemaining = maxRetries;
           }
           lastAttempt = Date.now()
           this.shouldReconnect = false;
@@ -301,7 +301,7 @@ export class SimpleReactPyClient
             clearInterval(this.idleCheckIntervalId);
           if (!this.sleeping) {
             const thisInterval = nextInterval(addJitter(interval, intervalJitter), backoffRate, maxInterval);
-            const newRetriesRemaining = retriesRemaining - 1;
+            const newRetriesRemaining = connectionAttemptsRemaining - 1;
             logger.log(
               `reconnecting in ${(thisInterval / 1000).toPrecision(4)} seconds... (${newRetriesRemaining} retries remaining)`,
             );
