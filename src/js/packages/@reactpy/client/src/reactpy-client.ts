@@ -241,7 +241,7 @@ export class SimpleReactPyClient
     }
   }
 
-  reconnect(onOpen?: () => void, interval: number = 750, retriesRemaining: number = 30, lastSuccess: number = 0): void {
+  reconnect(onOpen?: () => void, interval: number = 750, retriesRemaining: number = 30, lastAttempt: number = 0): void {
     const intervalJitter = this.reconnectOptions?.intervalJitter || 0.5;
     const backoffRate = this.reconnectOptions?.backoffRate || 1.2;
     const maxInterval = this.reconnectOptions?.maxInterval || 20000;
@@ -257,7 +257,7 @@ export class SimpleReactPyClient
       // already reconnecting
       return;
     }
-    lastSuccess = lastSuccess || Date.now();
+    lastAttempt = lastAttempt || Date.now();
     this.shouldReconnect = true;
 
     window.setTimeout(() => {
@@ -270,16 +270,16 @@ export class SimpleReactPyClient
         readyPromise: this.ready,
         url: this.urls.stream,
         onOpen: () => {
-          lastSuccess = Date.now();
+          lastAttempt = Date.now();
           if (onOpen)
             onOpen();
         },
         onClose: () => {
           // reset retry interval
-          if (Date.now() - lastSuccess > maxInterval * 2) {
+          if (Date.now() - lastAttempt > maxInterval * 2) {
             interval = 750;
-            lastSuccess = Date.now()
           }
+          lastAttempt = Date.now()
           this.shouldReconnect = false;
           this.isReconnecting = true;
           this.isReady = false;
@@ -292,7 +292,7 @@ export class SimpleReactPyClient
             logger.log(
               `reconnecting in ${(thisInterval / 1000).toPrecision(4)} seconds...`,
             );
-            this.reconnect(onOpen, thisInterval, retriesRemaining - 1, lastSuccess);
+            this.reconnect(onOpen, thisInterval, retriesRemaining - 1, lastAttempt);
           }
         },
         onMessage: async ({ data }) => { this.lastMessageTime = Date.now(); this.handleIncoming(JSON.parse(data)) },
