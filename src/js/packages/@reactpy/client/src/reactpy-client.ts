@@ -242,10 +242,15 @@ export class SimpleReactPyClient
   }
 
   reconnect(onOpen?: () => void, interval: number = 750, retriesRemaining: number = 30): void {
-    const intervalJitter = this.reconnectOptions?.intervalJitter || 1.1;
-    const backoffRate = this.reconnectOptions?.backoffRate || 1.1;
+    const intervalJitter = this.reconnectOptions?.intervalJitter || 0.5;
+    const backoffRate = this.reconnectOptions?.backoffRate || 1.2;
     const maxInterval = this.reconnectOptions?.maxInterval || 20000;
     const maxRetries = this.reconnectOptions?.maxRetries || retriesRemaining;
+
+    if (retriesRemaining <= 0) {
+      this.shouldReconnect = false;
+      return
+    }
 
     if (this.shouldReconnect) {
       // already reconnecting
@@ -285,8 +290,7 @@ export class SimpleReactPyClient
             logger.log(
               `reconnecting in ${(thisInterval / 1000).toPrecision(4)} seconds...`,
             );
-            interval = nextInterval(interval, backoffRate, maxInterval);
-            this.reconnect(onOpen, interval, retriesRemaining - 1);
+            this.reconnect(onOpen, nextInterval(interval, backoffRate, maxInterval), retriesRemaining - 1);
           }
         },
         onMessage: async ({ data }) => { this.lastMessageTime = Date.now(); this.handleIncoming(JSON.parse(data)) },
