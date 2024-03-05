@@ -289,6 +289,7 @@ export class SimpleReactPyClient
           // reset retry interval
           if (Date.now() - lastAttempt > maxInterval * 2) {
             interval = 750;
+            retriesRemaining = maxRetries;
           }
           lastAttempt = Date.now()
           this.shouldReconnect = false;
