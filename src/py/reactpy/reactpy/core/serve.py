@@ -30,7 +30,7 @@ from reactpy.core.types import (
 
 logger = getLogger(__name__)
 
-MAX_HOT_RELOADING = environ.get("MAX_HOT_RELOADING", "0") in (
+MAX_HOT_RELOADING = environ.get("REACTPY_MAX_HOT_RELOADING", "0") in (
     "1",
     "true",
     "True",
