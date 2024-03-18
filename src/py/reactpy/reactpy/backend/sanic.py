@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from typing import Any
 from urllib import parse as urllib_parse
 from uuid import uuid4
-import orjson
 
+import orjson
 from sanic import Blueprint, Sanic, request, response
 from sanic.config import Config
 from sanic.server.websockets.connection import WebSocketConnection
@@ -213,7 +213,10 @@ def _make_send_recv_callbacks(
         await socket.send(orjson.dumps(value).decode("utf-8"))
 
     async def sock_recv() -> Any:
-        data = await socket.recv()
+        while True:
+            data = await socket.recv()
+            if data != "ping":
+                break
         if data is None:
             raise Stop()
         return orjson.loads(data)
