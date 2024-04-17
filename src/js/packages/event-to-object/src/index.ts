@@ -276,6 +276,7 @@ function convertElement(element: EventTarget | HTMLElement | null): any {
 const convertGenericElement = (element: HTMLElement) => ({
   tagName: element.tagName,
   boundingClientRect: { ...element.getBoundingClientRect() },
+  id: element.id,
 });
 
 const convertMediaElement = (element: HTMLMediaElement) => ({
