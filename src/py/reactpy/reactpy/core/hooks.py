@@ -192,7 +192,7 @@ def use_effect(
     hook = get_current_hook()
     if hook.reconnecting.current:
         if not isinstance(dependencies, ReconnectingOnly):
-            return use_memo(lambda: None)
+            return memoize(lambda: None)
     elif isinstance(dependencies, ReconnectingOnly):
         return
 
