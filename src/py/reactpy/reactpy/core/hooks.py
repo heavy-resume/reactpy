@@ -54,7 +54,9 @@ _Type = TypeVar("_Type")
 
 
 @overload
-def use_state(initial_value: Callable[[], _Type], *, server_only: bool = False) -> State[_Type]: ...
+def use_state(
+    initial_value: Callable[[], _Type], *, server_only: bool = False
+) -> State[_Type]: ...
 
 
 @overload
@@ -190,12 +192,9 @@ def use_effect(
     hook = get_current_hook()
     if hook.reconnecting.current:
         if not isinstance(dependencies, ReconnectingOnly):
-            return
-        dependencies = None
-    else:
-        if isinstance(dependencies, ReconnectingOnly):
-            return
-        dependencies = _try_to_infer_closure_values(function, dependencies)
+            return use_memo(lambda: None)
+    elif isinstance(dependencies, ReconnectingOnly):
+        return
 
     def add_effect(function: _EffectApplyFunc) -> None:
         if not asyncio.iscoroutinefunction(function):
