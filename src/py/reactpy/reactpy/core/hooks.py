@@ -103,10 +103,10 @@ def get_caller_info():
         patch_path = render_frame.f_locals.get("patch_path_for_state")
         if patch_path is not None:
             break
-    # Extract the relevant information: file path and line number and hash it
+    # Extract the relevant information: file path, line number, and line and hash it
     filename = caller_frame.f_code.co_filename
     lineno = caller_frame.f_lineno
-    line  = linecache.getline(filename, lineno)
+    line = linecache.getline(filename, lineno)
     return f"{filename} {lineno} {line}, {patch_path}"
 
 
