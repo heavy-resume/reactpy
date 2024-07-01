@@ -158,7 +158,7 @@ class StateRecoverySerializer:
             )
             return {}
         result = {}
-        for chunk in chunked(state_vars.items(), 50):
+        for chunk in chunked(list(state_vars.items()), 50):
             for key, value in chunk:
                 result[key] = self._serialize(key, value)
             await asyncio.sleep(0)  # relinquish CPU
