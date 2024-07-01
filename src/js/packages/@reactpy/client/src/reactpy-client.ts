@@ -189,9 +189,8 @@ export class SimpleReactPyClient
   constructor(props: SimpleReactPyClientProps) {
     super();
 
-    this.serverLocation = props.serverLocation;
     this.urls = getServerUrls(
-      this.serverLocation || {
+      props.serverLocation || {
         url: document.location.origin,
         route: document.location.pathname,
         query: document.location.search,
@@ -393,7 +392,7 @@ export class SimpleReactPyClient
     this.shouldReconnect = true;
 
     this.urls = getServerUrls(
-      this.serverLocation || {
+      {
         url: document.location.origin,
         route: document.location.pathname,
         query: document.location.search,
