@@ -7,7 +7,6 @@ from asyncio import (
     FIRST_COMPLETED,
     CancelledError,
     PriorityQueue,
-    Queue,
     Task,
     create_task,
     get_running_loop,
@@ -19,9 +18,8 @@ from contextlib import AsyncExitStack
 from logging import getLogger
 from typing import (
     Any,
-    Awaitable,
+    AsyncIterable,
     Callable,
-    Coroutine,
     Generic,
     NamedTuple,
     NewType,
@@ -57,7 +55,6 @@ from reactpy.core.types import (
     Key,
     LayoutEventMessage,
     LayoutUpdateMessage,
-    StateUpdateMessage,
     VdomChild,
     VdomDict,
     VdomJson,
@@ -155,7 +152,10 @@ class Layout:
         del self._root_life_cycle_state_id
         del self._model_states_by_life_cycle_state_id
 
-        clear_hook_state(self._hook_state_token)
+        try:
+            clear_hook_state(self._hook_state_token)
+        except LookupError:
+            pass
 
     def start_rendering(self) -> None:
         self._schedule_render_task(self._root_life_cycle_state_id)
@@ -188,7 +188,7 @@ class Layout:
         else:  # nocov
             return await self._serial_render()
 
-    async def render_until_queue_empty(self) -> None:
+    async def render_until_queue_empty(self) -> AsyncIterable[LayoutUpdateMessage]:
         model_state_id = await self._rendering_queue.get()
         while True:
             try:
@@ -199,7 +199,7 @@ class Layout:
                     f"{model_state_id!r} - component already unmounted"
                 )
             else:
-                await self._create_layout_update(model_state, get_hook_state())
+                yield await self._create_layout_update(model_state, get_hook_state())
             # this might seem counterintuitive. What's happening is that events can get kicked off
             # and currently there's no (obvious) visibility on if we're waiting for them to finish
             # so this will wait up to 0.15 * 5 = 750 ms to see if any renders come in before

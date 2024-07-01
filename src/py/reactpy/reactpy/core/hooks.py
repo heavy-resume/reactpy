@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from functools import lru_cache
 import hashlib
+import linecache
 import sys
 from collections.abc import Coroutine, Sequence
 from hashlib import md5
@@ -54,7 +55,9 @@ _Type = TypeVar("_Type")
 
 
 @overload
-def use_state(initial_value: Callable[[], _Type], *, server_only: bool = False) -> State[_Type]: ...
+def use_state(
+    initial_value: Callable[[], _Type], *, server_only: bool = False
+) -> State[_Type]: ...
 
 
 @overload
@@ -100,8 +103,11 @@ def get_caller_info():
         patch_path = render_frame.f_locals.get("patch_path_for_state")
         if patch_path is not None:
             break
-    # Extract the relevant information: file path and line number and hash it
-    return f"{caller_frame.f_code.co_filename} {caller_frame.f_lineno} {patch_path}"
+    # Extract the relevant information: file path, line number, and line and hash it
+    filename = caller_frame.f_code.co_filename
+    lineno = caller_frame.f_lineno
+    line = linecache.getline(filename, lineno)
+    return f"{filename} {lineno} {line}, {patch_path}"
 
 
 __DEBUG_CALLER_INFO_TO_STATE_KEY = {}
@@ -190,12 +196,9 @@ def use_effect(
     hook = get_current_hook()
     if hook.reconnecting.current:
         if not isinstance(dependencies, ReconnectingOnly):
-            return
-        dependencies = None
-    else:
-        if isinstance(dependencies, ReconnectingOnly):
-            return
-        dependencies = _try_to_infer_closure_values(function, dependencies)
+            return memoize(lambda: None)
+    elif isinstance(dependencies, ReconnectingOnly):
+        return
 
     def add_effect(function: _EffectApplyFunc) -> None:
         if not asyncio.iscoroutinefunction(function):
