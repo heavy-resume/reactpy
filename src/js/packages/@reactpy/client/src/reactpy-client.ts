@@ -163,7 +163,7 @@ enum messageTypes {
 export class SimpleReactPyClient
   extends BaseReactPyClient
   implements ReactPyClient {
-  private readonly urls: ServerUrls;
+  private urls: ServerUrls;
   private socket!: { current?: WebSocket };
   private idleDisconnectTimeMillis: number;
   private lastActivityTime: number;
@@ -389,6 +389,14 @@ export class SimpleReactPyClient
     }
     lastAttempt = lastAttempt || Date.now();
     this.shouldReconnect = true;
+
+    this.urls = getServerUrls(
+      {
+        url: document.location.origin,
+        route: document.location.pathname,
+        query: document.location.search,
+      },
+    );
 
     window.setTimeout(() => {
       if (!this.didReconnectingCallback && this.reconnectingCallback && maxRetries != connectionAttemptsRemaining) {
