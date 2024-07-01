@@ -184,7 +184,6 @@ export class SimpleReactPyClient
   private socketLoopThrottle: number;
   private pingPongIntervalId?: number | null;
   private pingInterval: number;
-  serverLocation: LocationProps | undefined;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
