@@ -23,7 +23,7 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from reactpy.config import REACTPY_DEBUG_MODE
-from reactpy.core._life_cycle_hook import get_current_hook
+from reactpy.core._life_cycle_hook import LifeCycleHook, get_current_hook
 from reactpy.core.state_recovery import StateRecoveryFailureError
 from reactpy.core.types import Context, Key, State, VdomDict
 from reactpy.utils import Ref
@@ -78,8 +78,10 @@ def use_state(
     Returns:
         A tuple containing the current state and a function to update it.
     """
+    hook: LifeCycleHook | None
     if server_only:
         key = None
+        hook = None
     else:
         hook = get_current_hook()
         caller_info = get_caller_info()
@@ -92,6 +94,8 @@ def use_state(
                     f"Missing expected key {key} on client"
                 ) from err
     current_state = _use_const(lambda: _CurrentState(key, initial_value))
+    if hook:
+        hook.add_state_update(current_state)
     return State(current_state.value, current_state.dispatch)
 
 
