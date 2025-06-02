@@ -219,6 +219,5 @@ function useImportSource(model: ReactPyVdom): MutableRefObject<any> {
 const SPECIAL_ELEMENTS = {
   input: UserInputElement,
   script: ScriptElement,
-  select: UserInputElement,
   textarea: UserInputElement,
 };
