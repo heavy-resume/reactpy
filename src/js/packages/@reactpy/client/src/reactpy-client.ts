@@ -158,6 +158,7 @@ enum messageTypes {
   stateUpdate = "state-update",
   layoutUpdate = "layout-update",
   pingIntervalSet = "ping-interval-set",
+  ackMessage = "ack"
 };
 
 export class SimpleReactPyClient
@@ -184,6 +185,7 @@ export class SimpleReactPyClient
   private socketLoopThrottle: number;
   private pingPongIntervalId?: number | null;
   private pingInterval: number;
+  private messageResponseTimeoutId?: number | null;
 
   constructor(props: SimpleReactPyClientProps) {
     super();
@@ -222,6 +224,7 @@ export class SimpleReactPyClient
       this.willReconnect = true;  // don't indicate a reconnect until at least one successful layout update
     });
     this.onMessage(messageTypes.pingIntervalSet, (msg) => { this.pingInterval = msg.ping_interval; this.updatePingInterval(); });
+    this.onMessage(messageTypes.ackMessage, () => {})
     this.updatePingInterval()
     this.reconnect()
 
@@ -340,7 +343,19 @@ export class SimpleReactPyClient
       }
       this.lastActivityTime = Date.now();
       this.socket.current.send(JSON.stringify(message));
+
+      // Start response timeout for reconnecting grayout
+      if (this.messageResponseTimeoutId) {
+        window.clearTimeout(this.messageResponseTimeoutId);
+      }
+      this.messageResponseTimeoutId = window.setTimeout(() => {
+        this.showReconnectingGrayout();
+      }, 800);
     }
+  }
+
+  protected handleIncoming(message: any): void {
+    super.handleIncoming(message);
   }
 
   idleTimeoutCheck(): void {
@@ -446,7 +461,15 @@ export class SimpleReactPyClient
             this.reconnect(onOpen, thisInterval, newRetriesRemaining, lastAttempt);
           }
         },
-        onMessage: async ({ data }) => { this.lastActivityTime = Date.now(); this.handleIncoming(JSON.parse(data)) },
+        onMessage: async ({ data }) => {
+          this.lastActivityTime = Date.now();
+          if (this.messageResponseTimeoutId) {
+            window.clearTimeout(this.messageResponseTimeoutId);
+            this.messageResponseTimeoutId = null;
+            this.hideReconnectingGrayout();
+          }
+          this.handleIncoming(JSON.parse(data));
+        },
         ...this.reconnectOptions,
       });
       this.socketLoopIntervalId = window.setInterval(() => { this.socketLoop() }, this.socketLoopThrottle);

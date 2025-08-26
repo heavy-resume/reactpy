@@ -269,6 +269,10 @@ class PingIntervalSetMessage(TypedDict):
     ping_interval: int
 
 
+class AckMessage(TypedDict):
+    type: Literal["ack-message"]
+
+
 class Context(Protocol[_Type]):
     """Returns a :class:`ContextProvider` component"""
 

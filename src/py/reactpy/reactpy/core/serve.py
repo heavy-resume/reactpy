@@ -18,6 +18,7 @@ from reactpy.core._life_cycle_hook import clear_hook_state, create_hook_state
 from reactpy.core.layout import Layout
 from reactpy.core.state_recovery import StateRecoveryFailureError, StateRecoveryManager
 from reactpy.core.types import (
+    AckMessage,
     ClientStateMessage,
     IsReadyMessage,
     LayoutEventMessage,
@@ -125,8 +126,9 @@ async def _single_incoming_loop(
     while True:
         # We need to fire and forget here so that we avoid waiting on the completion
         # of this event handler before receiving and running the next one.
-        task_group.start_soon(layout.deliver, await recv())
 
+        task_group.start_soon(layout.deliver, await recv())
+        task_group.start_soon(send, AckMessage(type="ack"))
 
 class WebsocketServer:
     def __init__(
