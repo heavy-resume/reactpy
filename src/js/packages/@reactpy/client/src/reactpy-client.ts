@@ -158,6 +158,7 @@ enum messageTypes {
   stateUpdate = "state-update",
   layoutUpdate = "layout-update",
   pingIntervalSet = "ping-interval-set",
+  ackMessage = "ack"
 };
 
 export class SimpleReactPyClient
@@ -223,6 +224,7 @@ export class SimpleReactPyClient
       this.willReconnect = true;  // don't indicate a reconnect until at least one successful layout update
     });
     this.onMessage(messageTypes.pingIntervalSet, (msg) => { this.pingInterval = msg.ping_interval; this.updatePingInterval(); });
+    this.onMessage(messageTypes.ackMessage, () => {})
     this.updatePingInterval()
     this.reconnect()
 
