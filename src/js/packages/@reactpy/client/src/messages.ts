@@ -17,6 +17,10 @@ export type ReconnectingCheckMessage = {
   value: string;
 }
 
-export type IncomingMessage = LayoutUpdateMessage | ReconnectingCheckMessage;
+export type AckMessage = {
+  type: "ack"
+}
+
+export type IncomingMessage = LayoutUpdateMessage | ReconnectingCheckMessage | AckMessage;
 export type OutgoingMessage = LayoutEventMessage | ReconnectingCheckMessage;
 export type Message = IncomingMessage | OutgoingMessage;

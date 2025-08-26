@@ -126,6 +126,7 @@ async def _single_incoming_loop(
         # We need to fire and forget here so that we avoid waiting on the completion
         # of this event handler before receiving and running the next one.
         task_group.start_soon(layout.deliver, await recv())
+        await send(AckMessage(type="ack"))
 
 
 class WebsocketServer:
