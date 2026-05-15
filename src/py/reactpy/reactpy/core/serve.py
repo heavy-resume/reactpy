@@ -39,11 +39,12 @@ MAX_HOT_RELOADING = environ.get("REACTPY_MAX_HOT_RELOADING", "0") in (
 )
 if MAX_HOT_RELOADING:
     logger.warning("Doing maximum hot reloading")
-    from reactpy.hot_reloading import (
-        monkeypatch_jurigged_to_kill_connections_if_function_update,
-    )
+    # TODO: remove?
+    # from reactpy.hot_reloading import (
+    #     monkeypatch_jurigged_to_kill_connections_if_function_update,
+    # )
 
-    monkeypatch_jurigged_to_kill_connections_if_function_update()
+    # monkeypatch_jurigged_to_kill_connections_if_function_update()
 
 SendCoroutine = Callable[
     [

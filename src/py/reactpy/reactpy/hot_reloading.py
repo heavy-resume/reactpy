@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 active_connections = []
 
-
+# TODO: remove?
 def monkeypatch_jurigged_to_kill_connections_if_function_update():
     import jurigged.codetools as jurigged_codetools  # type: ignore
     import jurigged.utils as jurigged_utils  # type: ignore
