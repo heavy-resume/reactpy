@@ -39,12 +39,11 @@ MAX_HOT_RELOADING = environ.get("REACTPY_MAX_HOT_RELOADING", "0") in (
 )
 if MAX_HOT_RELOADING:
     logger.warning("Doing maximum hot reloading")
-    # TODO: remove?
-    # from reactpy.hot_reloading import (
-    #     monkeypatch_jurigged_to_kill_connections_if_function_update,
-    # )
+    from reactpy.hot_reloading import (
+        monkeypatch_jurigged_to_kill_connections_if_function_update,
+    )
 
-    # monkeypatch_jurigged_to_kill_connections_if_function_update()
+    monkeypatch_jurigged_to_kill_connections_if_function_update()
 
 SendCoroutine = Callable[
     [
@@ -131,6 +130,7 @@ async def _single_incoming_loop(
         task_group.start_soon(layout.deliver, await recv())
         task_group.start_soon(send, AckMessage(type="ack"))
 
+
 class WebsocketServer:
     def __init__(
         self,
@@ -198,7 +198,7 @@ class WebsocketServer:
             logger.warning(
                 f"Unexpected type when expecting reconnecting-check: {result['type']}"
             )
-        await self._indicate_ready(),
+        (await self._indicate_ready(),)
 
     async def _indicate_ready(self) -> None:
         if MAX_HOT_RELOADING:
